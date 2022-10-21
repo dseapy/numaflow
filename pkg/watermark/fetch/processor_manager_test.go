@@ -6,6 +6,8 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/nats-io/nats-server/v2/server"
+	natsServer "github.com/nats-io/nats-server/v2/test"
 	"strconv"
 	"sync"
 	"testing"
@@ -30,8 +32,18 @@ func TestFetcherWithSameOTBucket(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
+	// Run NATS server
+	opts := &natsServer.DefaultTestOptions
+	opts.Port = server.RANDOM_PORT
+	opts.JetStream = true
+
+	nServer := natsServer.RunServer(opts)
+	defer nServer.Shutdown()
+
+	natsJetStreamUrl := fmt.Sprintf("nats://%s", nServer.Addr().String())
+
 	// connect to NATS
-	nc, err := jsclient.NewDefaultJetStreamClient(nats.DefaultURL).Connect(context.TODO())
+	nc, err := jsclient.NewDefaultJetStreamClient(natsJetStreamUrl).Connect(context.TODO())
 	assert.NoError(t, err)
 	defer nc.Close()
 
@@ -70,7 +82,7 @@ func TestFetcherWithSameOTBucket(t *testing.T) {
 	assert.NoError(t, err)
 
 	// create default JetStream client
-	defaultJetStreamClient := jsclient.NewDefaultJetStreamClient(nats.DefaultURL)
+	defaultJetStreamClient := jsclient.NewDefaultJetStreamClient(natsJetStreamUrl)
 
 	// create hbStore
 	hbStore, err := jetstream.NewKVJetStreamKVStore(ctx, "testFetch", keyspace+"_PROCESSORS", defaultJetStreamClient)
@@ -281,8 +293,18 @@ func TestFetcherWithSeparateOTBucket(t *testing.T) {
 
 	var ctx = context.Background()
 
+	// Run NATS server
+	opts := &natsServer.DefaultTestOptions
+	opts.Port = server.RANDOM_PORT
+	opts.JetStream = true
+
+	nServer := natsServer.RunServer(opts)
+	defer nServer.Shutdown()
+
+	natsJetStreamUrl := fmt.Sprintf("nats://%s", nServer.Addr().String())
+
 	// Connect to NATS
-	nc, err := jsclient.NewDefaultJetStreamClient(nats.DefaultURL).Connect(context.TODO())
+	nc, err := jsclient.NewDefaultJetStreamClient(natsJetStreamUrl).Connect(context.TODO())
 	assert.Nil(t, err)
 
 	// Create JetStream Context
@@ -342,7 +364,7 @@ func TestFetcherWithSeparateOTBucket(t *testing.T) {
 	_, err = p2OT.Put(fmt.Sprintf("%d", epoch), b)
 	assert.NoError(t, err)
 
-	defaultJetStreamClient := jsclient.NewDefaultJetStreamClient(nats.DefaultURL)
+	defaultJetStreamClient := jsclient.NewDefaultJetStreamClient(natsJetStreamUrl)
 
 	hbWatcher, err := jetstream.NewKVJetStreamKVWatch(ctx, "testFetch", keyspace+"_PROCESSORS", defaultJetStreamClient)
 	assert.NoError(t, err)
