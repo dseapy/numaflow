@@ -1,0 +1,11 @@
+apiVersion: numaflow.numaproj.io/v1alpha1
+kind: InterStepBufferService
+metadata:
+  name: default
+spec:
+  kafka:
+    external:
+      #TODO:KAFKA_ISBSVC document kafka install, similar to 0-isbsvc-redis-cluster.yaml, and update brokers to point to install
+      brokers:
+        - my-broker1:9092
+        - my-broker2:9092

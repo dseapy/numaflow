@@ -373,7 +373,7 @@ retry:
 					return writeOffsets, err
 				}
 			} else {
-				// we support write offsets only for jetstream
+				// we support write offsets only for jetstream and kafka
 				if _writeOffsets != nil {
 					writeOffsets = append(writeOffsets, _writeOffsets[idx])
 				}

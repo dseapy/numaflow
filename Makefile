@@ -84,9 +84,13 @@ test-redis:
 test-jetstream:
 	go test -tags isb_jetstream -race -short -v ./pkg/isb/jetstream
 
+.PHONY: test-kafka
+test-kafka:
+	go test -tags isb_kafka -race -short -v ./pkg/isb/kafka
+
 .PHONY: test-coverage-with-isb
 test-coverage-with-isb:
-	go test -covermode=atomic -coverprofile=test/profile.cov.tmp  -tags=isb_redis,isb_jetstream $(shell go list ./... | grep -v /vendor/ | grep -v /numaflow/test/ | grep -v /pkg/client/ | grep -v /pkg/proto/ | grep -v /hack/)
+	go test -covermode=atomic -coverprofile=test/profile.cov.tmp  -tags=isb_redis,isb_jetstream,isb_kafka $(shell go list ./... | grep -v /vendor/ | grep -v /numaflow/test/ | grep -v /pkg/client/ | grep -v /pkg/proto/ | grep -v /hack/)
 	cat test/profile.cov.tmp | grep -v v1alpha1/zz_generated | grep -v v1alpha1/generated > test/profile.cov
 	rm test/profile.cov.tmp
 	go tool cover -func=test/profile.cov
@@ -98,9 +102,16 @@ test-coverage-with-jetstream:
 	rm test/profile.cov.tmp
 	go tool cover -func=test/profile.cov
 
+.PHONY: test-coverage-with-kafka
+test-coverage-with-kafka:
+	go test -covermode=atomic -coverprofile=test/profile.cov.tmp  -tags isb_kafka $(shell go list ./... | grep -v /vendor/ | grep -v /numaflow/test/ | grep -v /pkg/client/ | grep -v /pkg/proto/ | grep -v /hack/)
+	cat test/profile.cov.tmp | grep -v v1alpha1/zz_generated | grep -v v1alpha1/generated > test/profile.cov
+	rm test/profile.cov.tmp
+	go tool cover -func=test/profile.cov
+
 .PHONY: test-code
 test-code:
-	go test -tags=isb_redis,isb_jetstream -race -v $(shell go list ./... | grep -v /vendor/ | grep -v /numaflow/test/)
+	go test -tags=isb_redis,isb_jetstream,isb_kafka -race -v $(shell go list ./... | grep -v /vendor/ | grep -v /numaflow/test/)
 
 test-e2e:
 test-kafka-e2e:

@@ -61,6 +61,13 @@ func NewISBSvcBufferCreateCommand() *cobra.Command {
 					return err
 				}
 				opts = append(opts, isbsvc.WithBufferConfig(isbSvcConfig.JetStream.BufferConfig))
+			case v1alpha1.ISBSvcTypeKafka:
+				isbsClient, err = isbsvc.NewISBKafkaSvc(pipelineName)
+				if err != nil {
+					logger.Errorw("Failed to get a ISB Service client.", zap.Error(err))
+					return err
+				}
+				opts = append(opts, isbsvc.WithBufferConfig(isbSvcConfig.Kafka.BufferConfig))
 			default:
 				cmd.HelpFunc()(cmd, args)
 				return fmt.Errorf("unsupported isb service type %q", isbSvcType)

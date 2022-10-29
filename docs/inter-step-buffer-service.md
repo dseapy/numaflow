@@ -137,6 +137,41 @@ Once a JetStream ISB Service is created, toggling the `encryption` field will ca
 
 Check [here](APIs.md#numaflow.numaproj.io/v1alpha1.JetStreamBufferService) for the full spec of `spec.jetstream`.
 
+## Kafka
+
+`Kafka` is supported as an `Inter-Step Buffer Service` implementation. We only support external kafka.
+
+#### External Kafka
+
+```yaml
+apiVersion: numaflow.numaproj.io/v1alpha1
+kind: InterStepBufferService
+metadata:
+  name: default
+spec:
+  kafka:
+    external:
+      brokers:
+        - my-broker1:19700
+        - my-broker2:19700
+      tls: # Optional.
+        insecureSkipVerify: # Optional, where to skip TLS verification. Default to false.
+        caCertSecret: # Optional, a secret reference, which contains the CA Cert.
+          name: my-ca-cert
+          key: my-ca-cert-key
+        certSecret: # Optional, pointing to a secret reference which contains the Cert.
+          name: my-cert
+          key: my-cert-key
+        keySecret: # Optional, pointing to a secret reference which contains the Private Key.
+          name: my-pk
+          key: my-pk-key
+      # Optional, a yaml format string which could apply more configuration for the sink.
+      # The configuration hierarchy follows the Struct of sarama.Config at https://github.com/Shopify/sarama/blob/main/config.go.
+      config: |
+        producer:
+        compression: 2
+```
+
 ## Redis
 
 **NOTE** Today when using Redis, the pipeline will stall if Redis has any data loss, especially during failovers.

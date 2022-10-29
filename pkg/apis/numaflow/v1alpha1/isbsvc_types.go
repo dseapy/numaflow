@@ -43,6 +43,7 @@ const (
 	ISBSvcTypeUnknown   ISBSvcType = ""
 	ISBSvcTypeRedis     ISBSvcType = "redis"
 	ISBSvcTypeJetStream ISBSvcType = "jetstream"
+	ISBSvcTypeKafka     ISBSvcType = "kafka"
 )
 
 // +genclient
@@ -76,11 +77,13 @@ type InterStepBufferServiceList struct {
 type InterStepBufferServiceSpec struct {
 	Redis     *RedisBuferService      `json:"redis,omitempty" protobuf:"bytes,1,opt,name=redis"`
 	JetStream *JetStreamBufferService `json:"jetstream,omitempty" protobuf:"bytes,2,opt,name=jetstream"`
+	Kafka     *KafkaBufferService     `json:"kafka,omitempty" protobuf:"bytes,3,opt,name=kafka"`
 }
 
 type BufferServiceConfig struct {
 	Redis     *RedisConfig     `json:"redis,omitempty" protobuf:"bytes,1,opt,name=redis"`
 	JetStream *JetStreamConfig `json:"jetstream,omitempty" protobuf:"bytes,2,opt,name=jetstream"`
+	Kafka     *KafkaConfig     `json:"kafka,omitempty" protobuf:"bytes,3,opt,name=kafka"`
 }
 
 type InterStepBufferServiceStatus struct {

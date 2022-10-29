@@ -48,6 +48,12 @@ func NewISBSvcBufferValidateCommand() *cobra.Command {
 					logger.Errorw("Failed to get a ISB Service client.", zap.Error(err))
 					return err
 				}
+			case v1alpha1.ISBSvcTypeKafka:
+				isbsClient, err = isbsvc.NewISBKafkaSvc(pipelineName)
+				if err != nil {
+					logger.Errorw("Failed to get a ISB Service client.", zap.Error(err))
+					return err
+				}
 			default:
 				cmd.HelpFunc()(cmd, args)
 				return fmt.Errorf("unsupported isb service type")

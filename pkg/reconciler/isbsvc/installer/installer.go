@@ -52,6 +52,9 @@ func getInstaller(isbsvc *dfv1.InterStepBufferService, client client.Client, con
 	} else if js := isbsvc.Spec.JetStream; js != nil {
 		labels[dfv1.KeyISBSvcType] = string(dfv1.ISBSvcTypeJetStream)
 		return NewJetStreamInstaller(client, isbsvc, config, labels, logger), nil
+	} else if kafka := isbsvc.Spec.Kafka; kafka != nil {
+		labels[dfv1.KeyISBSvcType] = string(dfv1.ISBSvcTypeKafka)
+		return NewExternalKafkaInstaller(isbsvc, logger), nil
 	}
 	return nil, fmt.Errorf("invalid isb service spec")
 }

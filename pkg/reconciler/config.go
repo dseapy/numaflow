@@ -17,6 +17,7 @@ type GlobalConfig struct {
 type ISBSvcConfig struct {
 	Redis     *RedisConfig     `json:"redis"`
 	JetStream *JetStreamConfig `json:"jetstream"`
+	Kafka     *KafkaConfig     `json:"kafka"`
 }
 
 type RedisConfig struct {

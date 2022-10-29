@@ -104,6 +104,17 @@ jobs:
           curl -L https://github.com/nats-io/nats-server/releases/download/v$JS_VERSION/nats-server-v$JS_VERSION-linux-amd64.zip -o nats-server.zip
           sudo unzip nats-server.zip -d nats-server
           nats-server/nats-server-v$JS_VERSION-linux-amd64/nats-server -js &
+      - name: Install Kafka
+        run: |
+          set -eux -o pipefail
+          KAFKA_VERSION=3.3.1
+          KAFKA_SCALA_VERSION=2.13
+          curl -L https://downloads.apache.org/kafka/$KAFKA_VERSION/kafka_$KAFKA_SCALA_VERSION-$KAFKA_VERSION.tgz -o kafka-server.tgz
+          mkdir kafka-server && tar -xf kafka-server.tgz -C kafka-server/
+          KAFKA_DIR=kafka-server/kafka_$KAFKA_SCALA_VERSION-$KAFKA_VERSION/
+          export KAFKA_CLUSTER_ID="$($KAFKA_DIR/bin/kafka-storage.sh random-uuid)"
+          $KAFKA_DIR/bin/kafka-storage.sh format -t $KAFKA_CLUSTER_ID -c $KAFKA_DIR/config/kraft/server.properties
+          $KAFKA_DIR/bin/kafka-server-start.sh -daemon $KAFKA_DIR/config/kraft/server.properties
       - name: Install Redis
         uses: shogo82148/actions-setup-redis@v1
         with:

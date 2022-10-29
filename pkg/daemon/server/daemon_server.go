@@ -51,6 +51,12 @@ func (ds *daemonServer) Run(ctx context.Context) error {
 			log.Errorw("Failed to get a ISB Service client.", zap.Error(err))
 			return err
 		}
+	case v1alpha1.ISBSvcTypeKafka:
+		isbSvcClient, err = isbsvc.NewISBKafkaSvc(ds.pipeline.Name, isbsvc.WithKafkaClient(jsclient.NewInClusterKafkaClient()))
+		if err != nil {
+			log.Errorw("Failed to get a ISB Service client.", zap.Error(err))
+			return err
+		}
 	default:
 		return fmt.Errorf("unsupported isbsvc buffer type %q", ds.isbSvcType)
 	}
