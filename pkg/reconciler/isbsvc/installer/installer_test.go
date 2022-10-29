@@ -57,6 +57,21 @@ var (
 		},
 	}
 
+	testExternalKafkaIsbSvc = &dfv1.InterStepBufferService{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNamespace,
+			Name:      testISBSName,
+		},
+		Spec: dfv1.InterStepBufferServiceSpec{
+
+			Kafka: &dfv1.KafkaBufferService{
+				External: &dfv1.KafkaConfig{
+					Brokers: []string{"broker1:9092", "broker2:9092"},
+				},
+			},
+		},
+	}
+
 	testExternalRedisIsbSvc = &dfv1.InterStepBufferService{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNamespace,
