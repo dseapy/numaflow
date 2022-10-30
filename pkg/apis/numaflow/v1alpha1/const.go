@@ -47,7 +47,7 @@ const (
 
 	// container names.
 	CtrInit   = "init"
-	CtrMain   = "main"
+	CtrMain   = "numa"
 	CtrUdf    = "udf"
 	CtrUdsink = "udsink"
 

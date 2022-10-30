@@ -37,7 +37,7 @@ var (
 			Name:      testISBSName,
 		},
 		Spec: dfv1.InterStepBufferServiceSpec{
-			Redis: &dfv1.RedisBuferService{
+			Redis: &dfv1.RedisBufferService{
 				Native: &dfv1.NativeRedis{
 					Version: testVersion,
 				},
@@ -79,7 +79,7 @@ var (
 		},
 		Spec: dfv1.InterStepBufferServiceSpec{
 
-			Redis: &dfv1.RedisBuferService{
+			Redis: &dfv1.RedisBufferService{
 				External: &dfv1.RedisConfig{
 					URL: "xxxxx",
 				},

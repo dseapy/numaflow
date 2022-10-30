@@ -240,28 +240,29 @@ func (v Vertex) GetPodSpec(req GetVertexPodSpecReq) (*corev1.PodSpec, error) {
 		Affinity:           v.Spec.Affinity,
 		ServiceAccountName: v.Spec.ServiceAccountName,
 		Volumes:            append(volumes, v.Spec.Volumes...),
-		InitContainers: []corev1.Container{
-			v.getInitContainer(req),
-		},
-		Containers: containers,
+		InitContainers:     v.getInitContainers(req),
+		Containers:         containers,
 	}
 	return spec, nil
 }
 
-func (v Vertex) getInitContainer(req GetVertexPodSpecReq) corev1.Container {
+func (v Vertex) getInitContainers(req GetVertexPodSpecReq) []corev1.Container {
 	envVars := []corev1.EnvVar{
 		{Name: EnvPipelineName, Value: v.Spec.PipelineName},
 		{Name: "GODEBUG", Value: os.Getenv("GODEBUG")},
 	}
 	envVars = append(envVars, req.Env...)
-	return corev1.Container{
-		Name:            CtrInit,
-		Env:             envVars,
-		Image:           req.Image,
-		ImagePullPolicy: req.PullPolicy,
-		Resources:       standardResources,
-		Args:            []string{"isbsvc-buffer-validate", "--isbsvc-type=" + string(req.ISBSvcType)},
+	initContainers := []corev1.Container{
+		{
+			Name:            CtrInit,
+			Env:             envVars,
+			Image:           req.Image,
+			ImagePullPolicy: req.PullPolicy,
+			Resources:       standardResources,
+			Args:            []string{"isbsvc-buffer-validate", "--isbsvc-type=" + string(req.ISBSvcType)},
+		},
 	}
+	return append(initContainers, v.Spec.InitContainers...)
 }
 func (vs VertexSpec) WithOutReplicas() VertexSpec {
 	zero := int32(0)
@@ -392,12 +393,16 @@ type AbstractVertex struct {
 	// +patchStrategy=merge
 	// +patchMergeKey=name
 	Volumes []corev1.Volume `json:"volumes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,16,rep,name=volumes"`
-	// Limits define the limitations such as buffer read batch size for all the vertices of a pipleine, will override pipeline level settings
+	// Limits define the limitations such as buffer read batch size for all the vertices of a pipeline, will override pipeline level settings
 	// +optional
 	Limits *VertexLimits `json:"limits,omitempty" protobuf:"bytes,17,opt,name=limits"`
 	// Settings for autoscaling
 	// +optional
 	Scale Scale `json:"scale,omitempty" protobuf:"bytes,18,opt,name=scale"`
+	// List of init containers belonging to the pod.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+	// +optional
+	InitContainers []corev1.Container `json:"initContainers,omitempty" protobuf:"bytes,19,rep,name=initContainers"`
 }
 
 type Scale struct {
@@ -425,13 +430,13 @@ type Scale struct {
 	// rate, thus less replicas. It's only effective for source vertices.
 	// +optional
 	TargetProcessingSeconds *uint32 `json:"targetProcessingSeconds,omitempty" protobuf:"varint,7,opt,name=targetProcessingSeconds"`
-	// TargetBufferUsage is used to define the target pencentage of usage of the buffer to be read.
+	// TargetBufferUsage is used to define the target percentage of usage of the buffer to be read.
 	// A valid and meaningful value should be less than the BufferUsageLimit defined in the Edge spec (or Pipeline spec), for example, 50.
 	// It only applies to UDF and Sink vertices as only they have buffers to read.
 	// +optional
 	TargetBufferUsage *uint32 `json:"targetBufferUsage,omitempty" protobuf:"varint,8,opt,name=targetBufferUsage"`
 	// ReplicasPerScale defines maximum replicas can be scaled up or down at once.
-	// The is use to prevent too aggresive scaling operations
+	// The is use to prevent too aggressive scaling operations
 	// +optional
 	ReplicasPerScale *uint32 `json:"replicasPerScale,omitempty" protobuf:"varint,9,opt,name=replicasPerScale"`
 }
