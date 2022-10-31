@@ -37,7 +37,7 @@ func Start(insecure bool, port int, namespaced bool, managedNamespace string, ba
 		router.Use(Namespace(managedNamespace))
 	}
 	routes.Routes(router)
-	router.Use(UrlRewrite(router))
+	router.Use(UrlRewrite(router, baseHRef))
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: router,
@@ -71,11 +71,21 @@ func needToRewrite(path string) bool {
 	return false
 }
 
-func UrlRewrite(r *gin.Engine) gin.HandlerFunc {
+func UrlRewrite(r *gin.Engine, baseHRef string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if needToRewrite(c.Request.URL.Path) {
-			c.Request.URL.Path = "/"
+		if needToRewrite(c.Request.URL.Path) { //TODO fix
+			c.Request.URL.Path = baseHRef
 			r.HandleContext(c)
+		} else if baseHRef != "/" &&
+			!strings.HasPrefix(c.Request.URL.Path, baseHRef) &&
+			!strings.HasPrefix("/"+c.Request.URL.Path, baseHRef) {
+			if strings.HasPrefix(c.Request.URL.Path, "/") {
+				c.Request.URL.Path = baseHRef + strings.TrimPrefix(c.Request.URL.Path, "/")
+				r.HandleContext(c)
+			} else {
+				c.Request.URL.Path = strings.TrimPrefix(baseHRef, "/") + c.Request.URL.Path
+				r.HandleContext(c)
+			}
 		}
 		c.Next()
 	}
