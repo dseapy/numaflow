@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -56,6 +57,11 @@ const (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
+// +kubebuilder:printcolumn:name="Vertices",type=integer,JSONPath=`.status.vertexCount`
+// +kubebuilder:printcolumn:name="Sources",type=integer,JSONPath=`.status.sourceCount`,priority=10
+// +kubebuilder:printcolumn:name="Sinks",type=integer,JSONPath=`.status.sinkCount`,priority=10
+// +kubebuilder:printcolumn:name="UDFs",type=integer,JSONPath=`.status.udfCount`,priority=10
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:openapi-gen=true
 type Pipeline struct {
@@ -77,11 +83,31 @@ func (p Pipeline) GetVertex(vertexName string) *AbstractVertex {
 	return nil
 }
 
+// ListAllEdges returns a copy of all the edges.
+func (p Pipeline) ListAllEdges() []Edge {
+	edges := []Edge{}
+	for _, e := range p.Spec.Edges {
+		edgeCopy := e.DeepCopy()
+		toVertex := p.GetVertex(e.To)
+		if toVertex.UDF == nil || toVertex.UDF.GroupBy == nil {
+			// Clean up parallelism if downstream vertex is not a reduce UDF.
+			edgeCopy.Parallelism = nil
+		} else if edgeCopy.Parallelism == nil || *edgeCopy.Parallelism < 1 {
+			// Set parallelism = 1 if it's not set.
+			edgeCopy.Parallelism = pointer.Int32(1)
+		}
+		edges = append(edges, *edgeCopy)
+	}
+	return edges
+}
+
 // FindEdgeWithBuffer is used to locate the edge of the buffer.
 func (p Pipeline) FindEdgeWithBuffer(buffer string) *Edge {
-	for _, e := range p.Spec.Edges {
-		if buffer == GenerateEdgeBufferName(p.Namespace, p.Name, e.From, e.To) {
-			return &e
+	for _, e := range p.ListAllEdges() {
+		for _, b := range GenerateEdgeBufferNames(p.Namespace, p.Name, e) {
+			if buffer == b {
+				return &e
+			}
 		}
 	}
 	return nil
@@ -89,9 +115,9 @@ func (p Pipeline) FindEdgeWithBuffer(buffer string) *Edge {
 
 func (p Pipeline) GetToEdges(vertexName string) []Edge {
 	edges := []Edge{}
-	for _, e := range p.Spec.Edges {
+	for _, e := range p.ListAllEdges() {
 		if e.From == vertexName {
-			edges = append(edges, e)
+			edges = append(edges, *e.DeepCopy())
 		}
 	}
 	return edges
@@ -99,9 +125,9 @@ func (p Pipeline) GetToEdges(vertexName string) []Edge {
 
 func (p Pipeline) GetFromEdges(vertexName string) []Edge {
 	edges := []Edge{}
-	for _, e := range p.Spec.Edges {
+	for _, e := range p.ListAllEdges() {
 		if e.To == vertexName {
-			edges = append(edges, e)
+			edges = append(edges, *e.DeepCopy())
 		}
 	}
 	return edges
@@ -109,8 +135,10 @@ func (p Pipeline) GetFromEdges(vertexName string) []Edge {
 
 func (p Pipeline) GetAllBuffers() []Buffer {
 	r := []Buffer{}
-	for _, e := range p.Spec.Edges {
-		r = append(r, Buffer{GenerateEdgeBufferName(p.Namespace, p.Name, e.From, e.To), EdgeBuffer})
+	for _, e := range p.ListAllEdges() {
+		for _, b := range GenerateEdgeBufferNames(p.Namespace, p.Name, e) {
+			r = append(r, Buffer{b, EdgeBuffer})
+		}
 	}
 	for _, v := range p.Spec.Vertices {
 		if v.Source != nil {
@@ -126,7 +154,7 @@ func (p Pipeline) GetAllBuffers() []Buffer {
 func (p Pipeline) GetDownstreamEdges(vertexName string) []Edge {
 	var f func(vertexName string, edges *[]Edge)
 	f = func(vertexName string, edges *[]Edge) {
-		for _, b := range p.Spec.Edges {
+		for _, b := range p.ListAllEdges() {
 			if b.From == vertexName {
 				*edges = append(*edges, b)
 				f(b.To, edges)
@@ -259,16 +287,59 @@ func (p Pipeline) GetDaemonServiceObj() *corev1.Service {
 	}
 }
 
+// GetPipelineLimits returns the pipeline limits with default values
+func (p Pipeline) GetPipelineLimits() PipelineLimits {
+	defaultReadBatchSize := uint64(DefaultReadBatchSize)
+	defaultBufferMaxLength := uint64(DefaultBufferLength)
+	defaultBufferUsageLimit := uint32(100 * DefaultBufferUsageLimit)
+	defaultReadTimeout := time.Second
+	limits := PipelineLimits{
+		ReadBatchSize:    &defaultReadBatchSize,
+		BufferMaxLength:  &defaultBufferMaxLength,
+		BufferUsageLimit: &defaultBufferUsageLimit,
+		ReadTimeout:      &metav1.Duration{Duration: defaultReadTimeout},
+	}
+	if x := p.Spec.Limits; x != nil {
+		if x.ReadBatchSize != nil {
+			limits.ReadBatchSize = x.ReadBatchSize
+		}
+		if x.BufferMaxLength != nil {
+			limits.BufferMaxLength = x.BufferMaxLength
+		}
+		if x.BufferUsageLimit != nil {
+			limits.BufferUsageLimit = x.BufferUsageLimit
+		}
+		if x.ReadTimeout != nil {
+			limits.ReadTimeout = x.ReadTimeout
+		}
+	}
+	return limits
+}
+
 type Lifecycle struct {
 	// DeleteGracePeriodSeconds used to delete pipeline gracefully
 	// +kubebuilder:default=30
 	// +optional
-	DeleteGracePeriodSeconds int32 `json:"deleteGracePeriodSeconds,omitempty" protobuf:"varint,1,opt,name=deleteGracePeriodSeconds"`
-
+	DeleteGracePeriodSeconds *int32 `json:"deleteGracePeriodSeconds,omitempty" protobuf:"varint,1,opt,name=deleteGracePeriodSeconds"`
 	// DesiredPhase used to bring the pipeline from current phase to desired phase
 	// +kubebuilder:default=Running
 	// +optional
 	DesiredPhase PipelinePhase `json:"desiredPhase,omitempty" protobuf:"bytes,2,opt,name=desiredPhase"`
+}
+
+// GetDeleteGracePeriodSeconds returns the value DeleteGracePeriodSeconds.
+func (lc Lifecycle) GetDeleteGracePeriodSeconds() int32 {
+	if lc.DeleteGracePeriodSeconds != nil {
+		return *lc.DeleteGracePeriodSeconds
+	}
+	return 30
+}
+
+func (lc Lifecycle) GetDesiredPhase() PipelinePhase {
+	if string(lc.DesiredPhase) != "" {
+		return lc.DesiredPhase
+	}
+	return PipelinePhaseRunning
 }
 
 type PipelineSpec struct {
@@ -283,7 +354,7 @@ type PipelineSpec struct {
 	// +kubebuilder:default={"deleteGracePeriodSeconds": 30, "desiredPhase": Running}
 	// +optional
 	Lifecycle Lifecycle `json:"lifecycle,omitempty" protobuf:"bytes,4,opt,name=lifecycle"`
-	// Limits define the limitations such as buffer read batch size for all the vertices of a pipleine, they could be overridden by each vertex's settings
+	// Limits define the limitations such as buffer read batch size for all the vertices of a pipeline, they could be overridden by each vertex's settings
 	// +kubebuilder:default={"readBatchSize": 500, "bufferMaxLength": 30000, "bufferUsageLimit": 80}
 	// +optional
 	Limits *PipelineLimits `json:"limits,omitempty" protobuf:"bytes,5,opt,name=limits"`
@@ -306,6 +377,14 @@ type Watermark struct {
 	MaxDelay *metav1.Duration `json:"maxDelay,omitempty" protobuf:"bytes,2,opt,name=maxDelay"`
 }
 
+// GetMaxDelay returns the configured max delay with a default value
+func (wm Watermark) GetMaxDelay() time.Duration {
+	if wm.MaxDelay != nil {
+		return wm.MaxDelay.Duration
+	}
+	return time.Duration(0)
+}
+
 type PipelineLimits struct {
 	// Read batch size for all the vertices in the pipeline, can be overridden by the vertex's limit settings
 	// +kubebuilder:default=500
@@ -314,10 +393,10 @@ type PipelineLimits struct {
 	// BufferMaxLength is used to define the max length of a buffer
 	// Only applies to UDF and Source vertice as only they do buffer write.
 	// It can be overridden by the settings in vertex limits.
-	// +kubebuilder:default=30000
+	// +kubebuilder:default=50000
 	// +optional
 	BufferMaxLength *uint64 `json:"bufferMaxLength,omitempty" protobuf:"varint,2,opt,name=bufferMaxLength"`
-	// BufferUsageLimit is used to define the pencentage of the buffer usage limit, a valid value should be less than 100, for example, 85.
+	// BufferUsageLimit is used to define the percentage of the buffer usage limit, a valid value should be less than 100, for example, 85.
 	// Only applies to UDF and Source vertice as only they do buffer write.
 	// It will be overridden by the settings in vertex limits.
 	// +kubebuilder:default=80
@@ -334,6 +413,34 @@ type PipelineStatus struct {
 	Phase       PipelinePhase `json:"phase,omitempty" protobuf:"bytes,2,opt,name=phase,casttype=PipelinePhase"`
 	Message     string        `json:"message,omitempty" protobuf:"bytes,3,opt,name=message"`
 	LastUpdated metav1.Time   `json:"lastUpdated,omitempty" protobuf:"bytes,4,opt,name=lastUpdated"`
+	VertexCount *uint32       `json:"vertexCount,omitempty" protobuf:"varint,5,opt,name=vertexCount"`
+	SourceCount *uint32       `json:"sourceCount,omitempty" protobuf:"varint,6,opt,name=sourceCount"`
+	SinkCount   *uint32       `json:"sinkCount,omitempty" protobuf:"varint,7,opt,name=sinkCount"`
+	UDFCount    *uint32       `json:"udfCount,omitempty" protobuf:"varint,8,opt,name=udfCount"`
+}
+
+// SetVertexCounts sets the counts of vertices.
+func (pls *PipelineStatus) SetVertexCounts(vertices []AbstractVertex) {
+	var vertexCount = uint32(len(vertices))
+	var sinkCount uint32
+	var sourceCount uint32
+	var udfCount uint32
+	for _, v := range vertices {
+		if v.Source != nil {
+			sourceCount++
+		}
+		if v.Sink != nil {
+			sinkCount++
+		}
+		if v.UDF != nil {
+			udfCount++
+		}
+	}
+
+	pls.VertexCount = &vertexCount
+	pls.SinkCount = &sinkCount
+	pls.SourceCount = &sourceCount
+	pls.UDFCount = &udfCount
 }
 
 func (pls *PipelineStatus) SetPhase(phase PipelinePhase, msg string) {

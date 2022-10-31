@@ -2,10 +2,12 @@ package v1alpha1
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 var (
@@ -27,6 +29,25 @@ var (
 		},
 	}
 )
+
+func Test_ListAllEdges(t *testing.T) {
+	es := testPipeline.ListAllEdges()
+	assert.Equal(t, 2, len(es))
+	assert.Nil(t, es[0].Parallelism)
+	assert.Nil(t, es[1].Parallelism)
+	pl := testPipeline.DeepCopy()
+	pl.Spec.Vertices[1].UDF.GroupBy = &GroupBy{}
+	es = pl.ListAllEdges()
+	assert.Equal(t, 2, len(es))
+	assert.NotNil(t, es[0].Parallelism)
+	assert.Equal(t, int32(1), *es[0].Parallelism)
+	assert.Nil(t, es[1].Parallelism)
+	pl.Spec.Edges[0].Parallelism = pointer.Int32(3)
+	es = pl.ListAllEdges()
+	assert.Equal(t, 2, len(es))
+	assert.NotNil(t, es[0].Parallelism)
+	assert.Equal(t, int32(3), *es[0].Parallelism)
+}
 
 func Test_GetToEdges(t *testing.T) {
 	es := testPipeline.GetToEdges("p1")
@@ -127,6 +148,15 @@ func TestGetDaemonDeploy(t *testing.T) {
 	})
 }
 
+func Test_PipelineVertexCounts(t *testing.T) {
+	s := PipelineStatus{}
+	s.SetVertexCounts(testPipeline.Spec.Vertices)
+	assert.Equal(t, uint32(3), *s.VertexCount)
+	assert.Equal(t, uint32(1), *s.SourceCount)
+	assert.Equal(t, uint32(1), *s.SinkCount)
+	assert.Equal(t, uint32(1), *s.UDFCount)
+}
+
 func Test_PipelineSetPhase(t *testing.T) {
 	s := PipelineStatus{}
 	s.SetPhase(PipelinePhaseRunning, "message")
@@ -196,6 +226,13 @@ func Test_GetDownstreamEdges(t *testing.T) {
 			Namespace: "test-ns",
 		},
 		Spec: PipelineSpec{
+			Vertices: []AbstractVertex{
+				{Name: "input"},
+				{Name: "p1"},
+				{Name: "p2"},
+				{Name: "p11"},
+				{Name: "output"},
+			},
 			Edges: []Edge{
 				{From: "input", To: "p1"},
 				{From: "p1", To: "p11"},
@@ -206,7 +243,7 @@ func Test_GetDownstreamEdges(t *testing.T) {
 	}
 	edges := pl.GetDownstreamEdges("input")
 	assert.Equal(t, 4, len(edges))
-	assert.Equal(t, edges, pl.Spec.Edges)
+	assert.Equal(t, edges, pl.ListAllEdges())
 	assert.Equal(t, edges[2], Edge{From: "p1", To: "p2"})
 
 	edges = pl.GetDownstreamEdges("p1")
@@ -217,4 +254,51 @@ func Test_GetDownstreamEdges(t *testing.T) {
 
 	edges = pl.GetDownstreamEdges("notexisting")
 	assert.Equal(t, 0, len(edges))
+}
+
+func Test_GetWatermarkMaxDelay(t *testing.T) {
+	wm := Watermark{}
+	assert.Equal(t, "0s", wm.GetMaxDelay().String())
+	wm.MaxDelay = &metav1.Duration{Duration: time.Duration(2 * time.Second)}
+	assert.Equal(t, "2s", wm.GetMaxDelay().String())
+}
+
+func Test_GetDeleteGracePeriodSeconds(t *testing.T) {
+	lc := Lifecycle{}
+	assert.Equal(t, int32(30), lc.GetDeleteGracePeriodSeconds())
+	lc.DeleteGracePeriodSeconds = pointer.Int32(50)
+	assert.Equal(t, int32(50), lc.GetDeleteGracePeriodSeconds())
+}
+
+func Test_GetDesiredPhase(t *testing.T) {
+	lc := Lifecycle{}
+	assert.Equal(t, PipelinePhaseRunning, lc.GetDesiredPhase())
+	lc.DesiredPhase = PipelinePhasePaused
+	assert.Equal(t, PipelinePhasePaused, lc.GetDesiredPhase())
+}
+
+func Test_GetPipelineLimits(t *testing.T) {
+	pl := Pipeline{
+		Spec: PipelineSpec{},
+	}
+	l := pl.GetPipelineLimits()
+	assert.Equal(t, int64(DefaultBufferLength), int64(*l.BufferMaxLength))
+	assert.Equal(t, float64(DefaultBufferUsageLimit), float64(*l.BufferUsageLimit)/100)
+	assert.Equal(t, int64(DefaultReadBatchSize), int64(*l.ReadBatchSize))
+	assert.Equal(t, "1s", l.ReadTimeout.Duration.String())
+
+	length := uint64(2000)
+	usuageLimit := uint32(40)
+	readBatch := uint64(321)
+	pl.Spec.Limits = &PipelineLimits{
+		BufferMaxLength:  &length,
+		BufferUsageLimit: &usuageLimit,
+		ReadBatchSize:    &readBatch,
+		ReadTimeout:      &metav1.Duration{Duration: time.Duration(5 * time.Second)},
+	}
+	l = pl.GetPipelineLimits()
+	assert.Equal(t, length, *l.BufferMaxLength)
+	assert.Equal(t, float64(40)/100, float64(*l.BufferUsageLimit)/100)
+	assert.Equal(t, readBatch, *l.ReadBatchSize)
+	assert.Equal(t, "5s", l.ReadTimeout.Duration.String())
 }

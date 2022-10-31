@@ -49,7 +49,7 @@ var recordGenerator = func(size int32) []byte {
 	r := payload{Data: b, Createdts: nano}
 	data, err := json.Marshal(r)
 	if err != nil {
-		log.Errorf("error marshalling the record [%v]", r)
+		log.Errorf("Error marshalling the record [%v]", r)
 	}
 	return data
 }
@@ -111,17 +111,26 @@ func WithReadTimeOut(timeout time.Duration) Option {
 //	is created for use by this vertex.
 //
 // name - name of this vertex
-// rpu  - no of records to generate per time unit. by default the channel buffer size is set to 5*rpu
-// msgSize - size of each generated message
-// timeunit - unit of time per tick. could be any golang time.Duration.
 // writers - destinations to write to
 func NewMemGen(vertexInstance *dfv1.VertexInstance,
-	rpu int,
-	msgSize int32,
-	timeunit time.Duration,
 	writers []isb.BufferWriter,
 	fetchWM fetch.Fetcher, publishWM map[string]publish.Publisher, publishWMStores store.WatermarkStorer, // watermarks
 	opts ...Option) (*memgen, error) {
+
+	// minimal CRDs don't have defaults
+	rpu := 5
+	if vertexInstance.Vertex.Spec.Source.Generator.RPU != nil {
+		rpu = int(*(vertexInstance.Vertex.Spec.Source.Generator.RPU))
+	}
+	msgSize := int32(8)
+	if vertexInstance.Vertex.Spec.Source.Generator.MsgSize != nil {
+		msgSize = *vertexInstance.Vertex.Spec.Source.Generator.MsgSize
+	}
+	timeunit := time.Second
+	if vertexInstance.Vertex.Spec.Source.Generator.Duration != nil {
+		timeunit = vertexInstance.Vertex.Spec.Source.Generator.Duration.Duration
+	}
+
 	gensrc := &memgen{
 		rpu:            rpu,
 		msgSize:        msgSize,
@@ -297,7 +306,7 @@ func newreadmessage(payload []byte, offset int64) *isb.ReadMessage {
 	}
 
 	return &isb.ReadMessage{
-		ReadOffset: isb.SimpleOffset(func() string { return strconv.FormatInt(offset, 10) }),
+		ReadOffset: isb.SimpleIntOffset(func() int64 { return offset }),
 		Message:    msg,
 	}
 }

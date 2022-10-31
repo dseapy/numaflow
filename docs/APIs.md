@@ -229,7 +229,7 @@ ServiceAccountName to apply to the StatefulSet
 <em>(Optional)</em>
 <p>
 Limits define the limitations such as buffer read batch size for all the
-vertices of a pipleine, will override pipeline level settings
+vertices of a pipeline, will override pipeline level settings
 </p>
 </td>
 </tr>
@@ -242,6 +242,20 @@ vertices of a pipleine, will override pipeline level settings
 <em>(Optional)</em>
 <p>
 Settings for autoscaling
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>initContainers</code></br> <em>
+<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#container-v1-core">
+\[\]Kubernetes core/v1.Container </a> </em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>
+List of init containers belonging to the pod. More info:
+<a href="https://kubernetes.io/docs/concepts/workloads/pods/init-containers/">https://kubernetes.io/docs/concepts/workloads/pods/init-containers/</a>
 </p>
 </td>
 </tr>
@@ -566,7 +580,7 @@ ForwardConditions </a> </em>
 <td>
 <em>(Optional)</em>
 <p>
-Conditional forwarding, only allowed when “From” is a Sink or UDF
+Conditional forwarding, only allowed when “From” is a Sink or UDF.
 </p>
 </td>
 </tr>
@@ -580,7 +594,20 @@ Conditional forwarding, only allowed when “From” is a Sink or UDF
 <em>(Optional)</em>
 <p>
 Limits define the limitations such as buffer read batch size for the
-edge, will override pipeline level settings
+edge, will override pipeline level settings.
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>parallelism</code></br> <em> int32 </em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>
+Parallelism is only effective when the “to” vertex is a reduce vertex,
+if it’s provided, the default value is set to “1”. Parallelism is
+ignored when the “to” vertex is not a reduce vertex.
 </p>
 </td>
 </tr>
@@ -626,10 +653,45 @@ overrides the settings from pipeline limits.
 <td>
 <em>(Optional)</em>
 <p>
-BufferUsageLimit is used to define the pencentage of the buffer usage
+BufferUsageLimit is used to define the percentage of the buffer usage
 limit, a valid value should be less than 100, for example, 85. It
 overrides the settings from pipeline limits.
 </p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="numaflow.numaproj.io/v1alpha1.FixedWindow">
+FixedWindow
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#numaflow.numaproj.io/v1alpha1.Window">Window</a>)
+</p>
+<p>
+<p>
+FixedWindow describes a fixed window
+</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>
+Field
+</th>
+<th>
+Description
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>length</code></br> <em>
+<a href="https://pkg.go.dev/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration </a> </em>
+</td>
+<td>
 </td>
 </tr>
 </tbody>
@@ -1203,6 +1265,48 @@ Kubernetes core/v1.PullPolicy </a> </em>
 </tr>
 </tbody>
 </table>
+<h3 id="numaflow.numaproj.io/v1alpha1.GroupBy">
+GroupBy
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#numaflow.numaproj.io/v1alpha1.UDF">UDF</a>)
+</p>
+<p>
+<p>
+GroupBy indicates it is a reducer UDF
+</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>
+Field
+</th>
+<th>
+Description
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>window</code></br> <em>
+<a href="#numaflow.numaproj.io/v1alpha1.Window"> Window </a> </em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>keyed</code></br> <em> bool </em>
+</td>
+<td>
+<em>(Optional)</em>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="numaflow.numaproj.io/v1alpha1.HTTPSource">
 HTTPSource
 </h3>
@@ -1264,7 +1368,8 @@ ISBSvcType (<code>string</code> alias)
 <p>
 (<em>Appears on:</em>
 <a href="#numaflow.numaproj.io/v1alpha1.GetDaemonDeploymentReq">GetDaemonDeploymentReq</a>,
-<a href="#numaflow.numaproj.io/v1alpha1.GetVertexPodSpecReq">GetVertexPodSpecReq</a>)
+<a href="#numaflow.numaproj.io/v1alpha1.GetVertexPodSpecReq">GetVertexPodSpecReq</a>,
+<a href="#numaflow.numaproj.io/v1alpha1.InterStepBufferServiceStatus">InterStepBufferServiceStatus</a>)
 </p>
 <p>
 </p>
@@ -1308,8 +1413,8 @@ InterStepBufferServiceSpec </a> </em>
 <tr>
 <td>
 <code>redis</code></br> <em>
-<a href="#numaflow.numaproj.io/v1alpha1.RedisBuferService">
-RedisBuferService </a> </em>
+<a href="#numaflow.numaproj.io/v1alpha1.RedisBufferService">
+RedisBufferService </a> </em>
 </td>
 <td>
 </td>
@@ -1362,8 +1467,8 @@ Description
 <tr>
 <td>
 <code>redis</code></br> <em>
-<a href="#numaflow.numaproj.io/v1alpha1.RedisBuferService">
-RedisBuferService </a> </em>
+<a href="#numaflow.numaproj.io/v1alpha1.RedisBufferService">
+RedisBufferService </a> </em>
 </td>
 <td>
 </td>
@@ -1432,6 +1537,15 @@ Description
 <code>config</code></br> <em>
 <a href="#numaflow.numaproj.io/v1alpha1.BufferServiceConfig">
 BufferServiceConfig </a> </em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>type</code></br> <em>
+<a href="#numaflow.numaproj.io/v1alpha1.ISBSvcType"> ISBSvcType </a>
+</em>
 </td>
 <td>
 </td>
@@ -2070,7 +2184,7 @@ NativeRedis
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#numaflow.numaproj.io/v1alpha1.RedisBuferService">RedisBuferService</a>)
+<a href="#numaflow.numaproj.io/v1alpha1.RedisBufferService">RedisBufferService</a>)
 </p>
 <p>
 </p>
@@ -2451,7 +2565,7 @@ Lifecycle define the Lifecycle properties
 <em>(Optional)</em>
 <p>
 Limits define the limitations such as buffer read batch size for all the
-vertices of a pipleine, they could be overridden by each vertex’s
+vertices of a pipeline, they could be overridden by each vertex’s
 settings
 </p>
 </td>
@@ -2539,7 +2653,7 @@ be overridden by the settings in vertex limits.
 <td>
 <em>(Optional)</em>
 <p>
-BufferUsageLimit is used to define the pencentage of the buffer usage
+BufferUsageLimit is used to define the percentage of the buffer usage
 limit, a valid value should be less than 100, for example, 85. Only
 applies to UDF and Source vertice as only they do buffer write. It will
 be overridden by the settings in vertex limits.
@@ -2644,7 +2758,7 @@ Lifecycle define the Lifecycle properties
 <em>(Optional)</em>
 <p>
 Limits define the limitations such as buffer read batch size for all the
-vertices of a pipleine, they could be overridden by each vertex’s
+vertices of a pipeline, they could be overridden by each vertex’s
 settings
 </p>
 </td>
@@ -2723,10 +2837,38 @@ Kubernetes meta/v1.Time </a> </em>
 <td>
 </td>
 </tr>
+<tr>
+<td>
+<code>vertexCount</code></br> <em> uint32 </em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>sourceCount</code></br> <em> uint32 </em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>sinkCount</code></br> <em> uint32 </em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>udfCount</code></br> <em> uint32 </em>
+</td>
+<td>
+</td>
+</tr>
 </tbody>
 </table>
-<h3 id="numaflow.numaproj.io/v1alpha1.RedisBuferService">
-RedisBuferService
+<h3 id="numaflow.numaproj.io/v1alpha1.RedisBufferService">
+RedisBufferService
 </h3>
 <p>
 (<em>Appears on:</em>
@@ -2778,7 +2920,7 @@ RedisConfig
 <p>
 (<em>Appears on:</em>
 <a href="#numaflow.numaproj.io/v1alpha1.BufferServiceConfig">BufferServiceConfig</a>,
-<a href="#numaflow.numaproj.io/v1alpha1.RedisBuferService">RedisBuferService</a>)
+<a href="#numaflow.numaproj.io/v1alpha1.RedisBufferService">RedisBufferService</a>)
 </p>
 <p>
 </p>
@@ -3049,7 +3191,7 @@ only effective for source vertices.
 <td>
 <em>(Optional)</em>
 <p>
-TargetBufferUsage is used to define the target pencentage of usage of
+TargetBufferUsage is used to define the target percentage of usage of
 the buffer to be read. A valid and meaningful value should be less than
 the BufferUsageLimit defined in the Edge spec (or Pipeline spec), for
 example, 50. It only applies to UDF and Sink vertices as only they have
@@ -3065,7 +3207,7 @@ buffers to read.
 <em>(Optional)</em>
 <p>
 ReplicasPerScale defines maximum replicas can be scaled up or down at
-once. The is use to prevent too aggresive scaling operations
+once. The is use to prevent too aggressive scaling operations
 </p>
 </td>
 </tr>
@@ -3326,6 +3468,15 @@ Description
 <td>
 <code>builtin</code></br> <em>
 <a href="#numaflow.numaproj.io/v1alpha1.Function"> Function </a> </em>
+</td>
+<td>
+<em>(Optional)</em>
+</td>
+</tr>
+<tr>
+<td>
+<code>groupBy</code></br> <em>
+<a href="#numaflow.numaproj.io/v1alpha1.GroupBy"> GroupBy </a> </em>
 </td>
 <td>
 <em>(Optional)</em>
@@ -3773,6 +3924,42 @@ Kubernetes meta/v1.Duration </a> </em>
 Maximum delay allowed for watermark calculation, defaults to “0s”, which
 means no delay.
 </p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="numaflow.numaproj.io/v1alpha1.Window">
+Window
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#numaflow.numaproj.io/v1alpha1.GroupBy">GroupBy</a>)
+</p>
+<p>
+<p>
+Window describes windowing strategy
+</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>
+Field
+</th>
+<th>
+Description
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>fixed</code></br> <em>
+<a href="#numaflow.numaproj.io/v1alpha1.FixedWindow"> FixedWindow </a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
 </td>
 </tr>
 </tbody>

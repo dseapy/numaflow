@@ -23,7 +23,7 @@ func TestFetcherWithSameOTBucket_InMem(t *testing.T) {
 		keyspace           = "fetcherTest"
 		hbBucketName       = keyspace + "_PROCESSORS"
 		otBucketName       = keyspace + "_OT"
-		epoch        int64 = 1651161600
+		epoch        int64 = 1651161600000
 		testOffset   int64 = 100
 		wg           sync.WaitGroup
 	)
@@ -42,7 +42,7 @@ func TestFetcherWithSameOTBucket_InMem(t *testing.T) {
 	err = ot.PutKV(ctx, fmt.Sprintf("%s%s%d", "p1", "_", epoch), b)
 	assert.NoError(t, err)
 
-	epoch += 60
+	epoch += 60000
 	binary.LittleEndian.PutUint64(b, uint64(testOffset+5))
 	// this key format is meant for non-separate OT watcher
 	err = ot.PutKV(ctx, fmt.Sprintf("%s%s%d", "p2", "_", epoch), b)
@@ -50,10 +50,8 @@ func TestFetcherWithSameOTBucket_InMem(t *testing.T) {
 
 	hbWatcher, err := inmem.NewInMemWatch(ctx, "testFetch", keyspace+"_PROCESSORS", hbWatcherCh)
 	assert.NoError(t, err)
-	defer hbWatcher.Close()
 	otWatcher, err := inmem.NewInMemWatch(ctx, "testFetch", keyspace+"_OT", otWatcherCh)
 	assert.NoError(t, err)
-	defer otWatcher.Close()
 	var testVertex = NewProcessorManager(ctx, store.BuildWatermarkStoreWatcher(hbWatcher, otWatcher), WithPodHeartbeatRate(1), WithRefreshingProcessorsRate(1), WithSeparateOTBuckets(false))
 	var testBuffer = NewEdgeFetcher(ctx, "testBuffer", testVertex).(*edgeFetcher)
 
@@ -117,16 +115,16 @@ func TestFetcherWithSameOTBucket_InMem(t *testing.T) {
 	assert.True(t, allProcessors["p1"].IsDeleted())
 	assert.True(t, allProcessors["p2"].IsActive())
 
-	_ = testBuffer.GetWatermark(isb.SimpleOffset(func() string { return strconv.FormatInt(testOffset, 10) }))
+	_ = testBuffer.GetWatermark(isb.SimpleStringOffset(func() string { return strconv.FormatInt(testOffset, 10) }))
 	allProcessors = testBuffer.processorManager.GetAllProcessors()
 	assert.Equal(t, 2, len(allProcessors))
 	assert.True(t, allProcessors["p1"].IsDeleted())
 	assert.True(t, allProcessors["p2"].IsActive())
-	_ = testBuffer.GetWatermark(isb.SimpleOffset(func() string { return strconv.FormatInt(testOffset+3, 10) }))
+	// "p1" should be deleted after this GetWatermark offset=101
+	// because "p1" offsetTimeline's head offset=100, which is < inputOffset 103
+	_ = testBuffer.GetWatermark(isb.SimpleStringOffset(func() string { return strconv.FormatInt(testOffset+3, 10) }))
 	allProcessors = testBuffer.processorManager.GetAllProcessors()
-	// we don't delete inactive processors from processor manager, so the length should still be 2
-	assert.Equal(t, 2, len(allProcessors))
-	assert.True(t, allProcessors["p1"].IsDeleted())
+	assert.Equal(t, 1, len(allProcessors))
 	assert.True(t, allProcessors["p2"].IsActive())
 
 	time.Sleep(time.Second)
@@ -159,9 +157,27 @@ func TestFetcherWithSameOTBucket_InMem(t *testing.T) {
 	}
 	assert.True(t, allProcessors["p1"].IsActive())
 	assert.True(t, allProcessors["p2"].IsActive())
-	// "p1" should still have the same offsetTimeline
-	_ = testBuffer.GetWatermark(isb.SimpleOffset(func() string { return strconv.FormatInt(testOffset+1, 10) }))
+	// "p1" has been deleted from vertex.Processors
+	// so "p1" will be considered as a new processors and a new offsetTimeline watcher for "p1" will be created
+	_ = testBuffer.GetWatermark(isb.SimpleStringOffset(func() string { return strconv.FormatInt(testOffset+1, 10) }))
 	p1 := testBuffer.processorManager.GetProcessor("p1")
+
+	assert.NotNil(t, p1)
+	assert.True(t, p1.IsActive())
+	assert.NotNil(t, p1.offsetTimeline)
+	// wait till the offsetTimeline has been populated
+	newP1head := p1.offsetTimeline.GetHeadOffset()
+	for newP1head == -1 {
+		select {
+		case <-ctx.Done():
+			t.Fatalf("expected head offset to not be equal to -1, %s", ctx.Err())
+		default:
+			time.Sleep(1 * time.Millisecond)
+			newP1head = p1.offsetTimeline.GetHeadOffset()
+		}
+	}
+	// because we keep the kv updates history in the in mem watermark
+	// the new watcher will read all the history data to create this new offsetTimeline
 	assert.Equal(t, int64(100), p1.offsetTimeline.GetHeadOffset())
 
 	// publish a new watermark 101

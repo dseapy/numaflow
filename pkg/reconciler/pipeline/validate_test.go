@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"testing"
 
 	dfv1 "github.com/numaproj/numaflow/pkg/apis/numaflow/v1alpha1"
@@ -204,5 +205,52 @@ func TestValidateVertex(t *testing.T) {
 		err := validateVertex(v)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "or equal to")
+	})
+
+	t.Run("good init container", func(t *testing.T) {
+		v := dfv1.AbstractVertex{
+			InitContainers: []corev1.Container{
+				{Name: "my-test-image", Image: "my-image:latest"},
+			},
+		}
+		err := validateVertex(v)
+		assert.NoError(t, err)
+	})
+
+	t.Run("bad init container name", func(t *testing.T) {
+		v := dfv1.AbstractVertex{
+			InitContainers: []corev1.Container{
+				{Name: dfv1.CtrInit, Image: "my-image:latest"},
+			},
+		}
+		err := validateVertex(v)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "is reserved for containers created by numaflow")
+	})
+}
+
+func TestValidateUDF(t *testing.T) {
+	t.Run("bad window", func(t *testing.T) {
+		udf := dfv1.UDF{
+			GroupBy: &dfv1.GroupBy{
+				Window: dfv1.Window{},
+			},
+		}
+		err := validateUDF(udf)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "no windowing strategy specified")
+	})
+
+	t.Run("bad window length", func(t *testing.T) {
+		udf := dfv1.UDF{
+			GroupBy: &dfv1.GroupBy{
+				Window: dfv1.Window{
+					Fixed: &dfv1.FixedWindow{},
+				},
+			},
+		}
+		err := validateUDF(udf)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), `"length" is missing`)
 	})
 }

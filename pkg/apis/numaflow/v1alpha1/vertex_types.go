@@ -38,9 +38,10 @@ const (
 type VertexType string
 
 const (
-	VertexTypeSource VertexType = "Source"
-	VertexTypeSink   VertexType = "Sink"
-	VertexTypeUDF    VertexType = "UDF"
+	VertexTypeSource    VertexType = "Source"
+	VertexTypeSink      VertexType = "Sink"
+	VertexTypeMapUDF    VertexType = "MapUDF"
+	VertexTypeReduceUDF VertexType = "ReduceUDF"
 )
 
 // +genclient
@@ -72,15 +73,19 @@ func (v Vertex) IsASink() bool {
 	return v.Spec.Sink != nil
 }
 
-func (v Vertex) IsUDF() bool {
-	return v.Spec.Sink == nil && v.Spec.Source == nil
+func (v Vertex) IsMapUDF() bool {
+	return v.Spec.UDF != nil && v.Spec.UDF.GroupBy == nil
+}
+
+func (v Vertex) IsReduceUDF() bool {
+	return v.Spec.UDF != nil && v.Spec.UDF.GroupBy != nil
 }
 
 func (v Vertex) Scalable() bool {
-	if v.Spec.Scale.Disabled {
+	if v.Spec.Scale.Disabled || v.IsReduceUDF() {
 		return false
 	}
-	if v.IsASink() || v.IsUDF() {
+	if v.IsASink() || v.IsMapUDF() {
 		return true
 	}
 	if v.IsASource() {
@@ -137,7 +142,7 @@ func (v Vertex) getServiceObj(name string, headless bool, port int, servicePortN
 	return svc
 }
 
-func (v Vertex) commonEvns() []corev1.EnvVar {
+func (v Vertex) commonEnvs() []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{Name: EnvNamespace, ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
 		{Name: EnvPod, ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
@@ -163,7 +168,7 @@ func (v Vertex) GetPodSpec(req GetVertexPodSpecReq) (*corev1.PodSpec, error) {
 	envVars := []corev1.EnvVar{
 		{Name: EnvVertexObject, Value: encodedVertexSpec},
 	}
-	envVars = append(envVars, v.commonEvns()...)
+	envVars = append(envVars, v.commonEnvs()...)
 	envVars = append(envVars, req.Env...)
 	resources := standardResources
 	if v.Spec.ContainerTemplate != nil {
@@ -221,7 +226,7 @@ func (v Vertex) GetPodSpec(req GetVertexPodSpecReq) (*corev1.PodSpec, error) {
 	}
 
 	if len(containers) > 1 { // udf and udsink
-		containers[1].Env = append(containers[1].Env, v.commonEvns()...)
+		containers[1].Env = append(containers[1].Env, v.commonEnvs()...)
 	}
 
 	spec := &corev1.PodSpec{
@@ -235,28 +240,29 @@ func (v Vertex) GetPodSpec(req GetVertexPodSpecReq) (*corev1.PodSpec, error) {
 		Affinity:           v.Spec.Affinity,
 		ServiceAccountName: v.Spec.ServiceAccountName,
 		Volumes:            append(volumes, v.Spec.Volumes...),
-		InitContainers: []corev1.Container{
-			v.getInitContainer(req),
-		},
-		Containers: containers,
+		InitContainers:     v.getInitContainers(req),
+		Containers:         containers,
 	}
 	return spec, nil
 }
 
-func (v Vertex) getInitContainer(req GetVertexPodSpecReq) corev1.Container {
+func (v Vertex) getInitContainers(req GetVertexPodSpecReq) []corev1.Container {
 	envVars := []corev1.EnvVar{
 		{Name: EnvPipelineName, Value: v.Spec.PipelineName},
 		{Name: "GODEBUG", Value: os.Getenv("GODEBUG")},
 	}
 	envVars = append(envVars, req.Env...)
-	return corev1.Container{
-		Name:            CtrInit,
-		Env:             envVars,
-		Image:           req.Image,
-		ImagePullPolicy: req.PullPolicy,
-		Resources:       standardResources,
-		Args:            []string{"isbsvc-buffer-validate", "--isbsvc-type=" + string(req.ISBSvcType)},
+	initContainers := []corev1.Container{
+		{
+			Name:            CtrInit,
+			Env:             envVars,
+			Image:           req.Image,
+			ImagePullPolicy: req.PullPolicy,
+			Resources:       standardResources,
+			Args:            []string{"isbsvc-buffer-validate", "--isbsvc-type=" + string(req.ISBSvcType)},
+		},
 	}
+	return append(initContainers, v.Spec.InitContainers...)
 }
 func (vs VertexSpec) WithOutReplicas() VertexSpec {
 	zero := int32(0)
@@ -283,10 +289,10 @@ func (v Vertex) GetFromBuffers() []Buffer {
 	if v.IsASource() {
 		r = append(r, Buffer{GenerateSourceBufferName(v.Namespace, v.Spec.PipelineName, v.Spec.Name), SourceBuffer})
 	} else {
-		// TODO: current design always has len(v.Spec.FromEdges) equals 1
-		//   need to update once we support multiple fromEdges
 		for _, vt := range v.Spec.FromEdges {
-			r = append(r, Buffer{GenerateEdgeBufferName(v.Namespace, v.Spec.PipelineName, vt.From, v.Spec.Name), EdgeBuffer})
+			for _, b := range GenerateEdgeBufferNames(v.Namespace, v.Spec.PipelineName, vt) {
+				r = append(r, Buffer{b, EdgeBuffer})
+			}
 		}
 	}
 	return r
@@ -298,7 +304,9 @@ func (v Vertex) GetToBuffers() []Buffer {
 		r = append(r, Buffer{GenerateSinkBufferName(v.Namespace, v.Spec.PipelineName, v.Spec.Name), SinkBuffer})
 	} else {
 		for _, vt := range v.Spec.ToEdges {
-			r = append(r, Buffer{GenerateEdgeBufferName(v.Namespace, v.Spec.PipelineName, v.Spec.Name, vt.To), EdgeBuffer})
+			for _, b := range GenerateEdgeBufferNames(v.Namespace, v.Spec.PipelineName, vt) {
+				r = append(r, Buffer{b, EdgeBuffer})
+			}
 		}
 	}
 	return r
@@ -385,12 +393,16 @@ type AbstractVertex struct {
 	// +patchStrategy=merge
 	// +patchMergeKey=name
 	Volumes []corev1.Volume `json:"volumes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,16,rep,name=volumes"`
-	// Limits define the limitations such as buffer read batch size for all the vertices of a pipleine, will override pipeline level settings
+	// Limits define the limitations such as buffer read batch size for all the vertices of a pipeline, will override pipeline level settings
 	// +optional
 	Limits *VertexLimits `json:"limits,omitempty" protobuf:"bytes,17,opt,name=limits"`
 	// Settings for autoscaling
 	// +optional
 	Scale Scale `json:"scale,omitempty" protobuf:"bytes,18,opt,name=scale"`
+	// List of init containers belonging to the pod.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+	// +optional
+	InitContainers []corev1.Container `json:"initContainers,omitempty" protobuf:"bytes,19,rep,name=initContainers"`
 }
 
 type Scale struct {
@@ -418,13 +430,13 @@ type Scale struct {
 	// rate, thus less replicas. It's only effective for source vertices.
 	// +optional
 	TargetProcessingSeconds *uint32 `json:"targetProcessingSeconds,omitempty" protobuf:"varint,7,opt,name=targetProcessingSeconds"`
-	// TargetBufferUsage is used to define the target pencentage of usage of the buffer to be read.
+	// TargetBufferUsage is used to define the target percentage of usage of the buffer to be read.
 	// A valid and meaningful value should be less than the BufferUsageLimit defined in the Edge spec (or Pipeline spec), for example, 50.
 	// It only applies to UDF and Sink vertices as only they have buffers to read.
 	// +optional
 	TargetBufferUsage *uint32 `json:"targetBufferUsage,omitempty" protobuf:"varint,8,opt,name=targetBufferUsage"`
 	// ReplicasPerScale defines maximum replicas can be scaled up or down at once.
-	// The is use to prevent too aggresive scaling operations
+	// The is use to prevent too aggressive scaling operations
 	// +optional
 	ReplicasPerScale *uint32 `json:"replicasPerScale,omitempty" protobuf:"varint,9,opt,name=replicasPerScale"`
 }
@@ -541,9 +553,17 @@ type VertexList struct {
 	Items           []Vertex `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
-// GenerateEdgeBufferName generates buffer name
-func GenerateEdgeBufferName(namespace, pipelineName, fromVetex, toVertex string) string {
-	return fmt.Sprintf("%s-%s-%s-%s", namespace, pipelineName, fromVetex, toVertex)
+// GenerateEdgeBufferNames generates buffer names for an edge
+func GenerateEdgeBufferNames(namespace, pipelineName string, edge Edge) []string {
+	buffers := []string{}
+	if edge.Parallelism == nil {
+		buffers = append(buffers, fmt.Sprintf("%s-%s-%s-%s", namespace, pipelineName, edge.From, edge.To))
+		return buffers
+	}
+	for i := int32(0); i < *edge.Parallelism; i++ {
+		buffers = append(buffers, fmt.Sprintf("%s-%s-%s-%s-%d", namespace, pipelineName, edge.From, edge.To, i))
+	}
+	return buffers
 }
 
 func GenerateSourceBufferName(namespace, pipelineName, vertex string) string {

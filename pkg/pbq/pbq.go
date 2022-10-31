@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var COBErr = errors.New("error while writing to pbq, pbq is closed")
+var ErrCOB = errors.New("error while writing to pbq, pbq is closed")
 
 // PBQ Buffer queue which is backed with a persisted store, each partition
 // will have a PBQ associated with it
@@ -30,8 +30,8 @@ var _ ReadWriteCloser = (*PBQ)(nil)
 func (p *PBQ) Write(ctx context.Context, message *isb.ReadMessage) error {
 	// if cob we should return
 	if p.cob {
-		p.log.Errorw("failed to write message to pbq, pbq is closed", zap.Any("ID", p.PartitionID), zap.Any("header", message.Header))
-		return COBErr
+		p.log.Errorw("Failed to write message to pbq, pbq is closed", zap.Any("ID", p.PartitionID), zap.Any("header", message.Header))
+		return ErrCOB
 	}
 	var writeErr error
 	// we need context to get out of blocking write
@@ -84,7 +84,7 @@ readLoop:
 	for {
 		readMessages, eof, err := p.store.Read(size)
 		if err != nil {
-			p.log.Errorw("error while replaying records from store", zap.Any("ID", p.PartitionID), zap.Error(err))
+			p.log.Errorw("Error while replaying records from store", zap.Any("ID", p.PartitionID), zap.Error(err))
 		}
 		for _, msg := range readMessages {
 			// select to avoid infinite blocking while writing to output channel

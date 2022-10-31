@@ -20,12 +20,10 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	functionsdk "github.com/numaproj/numaflow-go/pkg/function"
 	"github.com/numaproj/numaflow/pkg/isb"
 	"github.com/numaproj/numaflow/pkg/pbq"
 	"github.com/numaproj/numaflow/pkg/pbq/partition"
 	udfreducer "github.com/numaproj/numaflow/pkg/udf/reducer"
-	"google.golang.org/grpc/metadata"
 )
 
 // ProcessAndForward reads messages from pbq, invokes udf using grpc, forwards the results to ISB, and then publishes
@@ -61,19 +59,11 @@ func NewProcessAndForward(ctx context.Context,
 
 // Process method reads messages from the supplied PBQ, invokes UDF to reduce the result.
 func (p *ProcessAndForward) Process(ctx context.Context) error {
-	var wg sync.WaitGroup
 	var err error
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		// FIXME: we need to fix https://github.com/numaproj/numaflow-go/blob/main/pkg/function/service.go#L101
-		ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{functionsdk.DatumKey: p.PartitionID.Key}))
-		p.result, err = p.UDF.Reduce(ctx, p.pbqReader.ReadCh())
-	}()
-
-	// wait for the reduce method to return
-	wg.Wait()
+	// FIXME: we need to fix https://github.com/numaproj/numaflow-go/blob/main/pkg/function/service.go#L101
+	// blocking call, only returns the result after it has read all the messages from pbq
+	p.result, err = p.UDF.Reduce(ctx, &p.PartitionID, p.pbqReader.ReadCh())
 	return err
 }
 
@@ -89,7 +79,7 @@ func (p *ProcessAndForward) Forward(ctx context.Context) error {
 	}
 	messagesToStep := p.whereToStep(to)
 
-	//store write offsets to publish watermark
+	// store write offsets to publish watermark
 	writeOffsets := make(map[string][]isb.Offset)
 
 	// parallel writes to each isb
@@ -164,26 +154,29 @@ func (p *ProcessAndForward) whereToStep(to []string) map[string][]isb.Message {
 // TODO: is there any point in returning an error here? this is an infinite loop and the only error is ctx.Done!
 func (p *ProcessAndForward) writeToBuffer(ctx context.Context, bufferID string, resultMessages []isb.Message) ([]isb.Offset, error) {
 	var ISBWriteBackoff = wait.Backoff{
-		Steps:    math.MaxInt64,
+		Steps:    math.MaxInt,
 		Duration: 100 * time.Millisecond,
 		Factor:   1,
 		Jitter:   0.1,
 	}
 
+	writeMessages := resultMessages
+
 	// write to isb with infinite exponential backoff (until shutdown is triggered)
-	var failedMessages []isb.Message
 	var offsets []isb.Offset
 	ctxClosedErr := wait.ExponentialBackoffWithContext(ctx, ISBWriteBackoff, func() (done bool, err error) {
 		var writeErrs []error
-		offsets, writeErrs = p.toBuffers[bufferID].Write(ctx, resultMessages)
-		for i, message := range resultMessages {
+		var failedMessages []isb.Message
+		offsets, writeErrs = p.toBuffers[bufferID].Write(ctx, writeMessages)
+		for i, message := range writeMessages {
 			if writeErrs[i] != nil {
 				failedMessages = append(failedMessages, message)
 			}
 		}
 		// retry only the failed messages
 		if len(failedMessages) > 0 {
-			resultMessages = failedMessages
+			p.log.Warnw("Failed to write messages to isb inside pnf", zap.Errors("errors", writeErrs))
+			writeMessages = failedMessages
 			return false, nil
 		}
 		return true, nil

@@ -17279,8 +17279,15 @@
           "x-kubernetes-patch-merge-key": "name",
           "x-kubernetes-patch-strategy": "merge"
         },
+        "initContainers": {
+          "description": "List of init containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/io.k8s.api.core.v1.Container"
+          }
+        },
         "limits": {
-          "description": "Limits define the limitations such as buffer read batch size for all the vertices of a pipleine, will override pipeline level settings",
+          "description": "Limits define the limitations such as buffer read batch size for all the vertices of a pipeline, will override pipeline level settings",
           "$ref": "#/definitions/io.numaproj.numaflow.v1alpha1.VertexLimits"
         },
         "metadata": {
@@ -17443,15 +17450,20 @@
       ],
       "properties": {
         "conditions": {
-          "description": "Conditional forwarding, only allowed when \"From\" is a Sink or UDF",
+          "description": "Conditional forwarding, only allowed when \"From\" is a Sink or UDF.",
           "$ref": "#/definitions/io.numaproj.numaflow.v1alpha1.ForwardConditions"
         },
         "from": {
           "type": "string"
         },
         "limits": {
-          "description": "Limits define the limitations such as buffer read batch size for the edge, will override pipeline level settings",
+          "description": "Limits define the limitations such as buffer read batch size for the edge, will override pipeline level settings.",
           "$ref": "#/definitions/io.numaproj.numaflow.v1alpha1.EdgeLimits"
+        },
+        "parallelism": {
+          "description": "Parallelism is only effective when the \"to\" vertex is a reduce vertex, if it's provided, the default value is set to \"1\". Parallelism is ignored when the \"to\" vertex is not a reduce vertex.",
+          "type": "integer",
+          "format": "int32"
         },
         "to": {
           "type": "string"
@@ -17467,9 +17479,18 @@
           "format": "int64"
         },
         "bufferUsageLimit": {
-          "description": "BufferUsageLimit is used to define the pencentage of the buffer usage limit, a valid value should be less than 100, for example, 85. It overrides the settings from pipeline limits.",
+          "description": "BufferUsageLimit is used to define the percentage of the buffer usage limit, a valid value should be less than 100, for example, 85. It overrides the settings from pipeline limits.",
           "type": "integer",
           "format": "int64"
+        }
+      }
+    },
+    "io.numaproj.numaflow.v1alpha1.FixedWindow": {
+      "description": "FixedWindow describes a fixed window",
+      "type": "object",
+      "properties": {
+        "length": {
+          "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.Duration"
         }
       }
     },
@@ -17780,6 +17801,21 @@
         }
       }
     },
+    "io.numaproj.numaflow.v1alpha1.GroupBy": {
+      "description": "GroupBy indicates it is a reducer UDF",
+      "type": "object",
+      "required": [
+        "window"
+      ],
+      "properties": {
+        "keyed": {
+          "type": "boolean"
+        },
+        "window": {
+          "$ref": "#/definitions/io.numaproj.numaflow.v1alpha1.Window"
+        }
+      }
+    },
     "io.numaproj.numaflow.v1alpha1.HTTPSource": {
       "type": "object",
       "properties": {
@@ -17851,7 +17887,7 @@
           "$ref": "#/definitions/io.numaproj.numaflow.v1alpha1.JetStreamBufferService"
         },
         "redis": {
-          "$ref": "#/definitions/io.numaproj.numaflow.v1alpha1.RedisBuferService"
+          "$ref": "#/definitions/io.numaproj.numaflow.v1alpha1.RedisBufferService"
         }
       }
     },
@@ -17874,6 +17910,9 @@
           "type": "string"
         },
         "phase": {
+          "type": "string"
+        },
+        "type": {
           "type": "string"
         }
       }
@@ -18228,7 +18267,7 @@
           "format": "int64"
         },
         "bufferUsageLimit": {
-          "description": "BufferUsageLimit is used to define the pencentage of the buffer usage limit, a valid value should be less than 100, for example, 85. Only applies to UDF and Source vertice as only they do buffer write. It will be overridden by the settings in vertex limits.",
+          "description": "BufferUsageLimit is used to define the percentage of the buffer usage limit, a valid value should be less than 100, for example, 85. Only applies to UDF and Source vertice as only they do buffer write. It will be overridden by the settings in vertex limits.",
           "type": "integer",
           "format": "int64"
         },
@@ -18286,7 +18325,7 @@
           "$ref": "#/definitions/io.numaproj.numaflow.v1alpha1.Lifecycle"
         },
         "limits": {
-          "description": "Limits define the limitations such as buffer read batch size for all the vertices of a pipleine, they could be overridden by each vertex's settings",
+          "description": "Limits define the limitations such as buffer read batch size for all the vertices of a pipeline, they could be overridden by each vertex's settings",
           "$ref": "#/definitions/io.numaproj.numaflow.v1alpha1.PipelineLimits"
         },
         "vertices": {
@@ -18323,10 +18362,26 @@
         },
         "phase": {
           "type": "string"
+        },
+        "sinkCount": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "sourceCount": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "udfCount": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "vertexCount": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
-    "io.numaproj.numaflow.v1alpha1.RedisBuferService": {
+    "io.numaproj.numaflow.v1alpha1.RedisBufferService": {
       "type": "object",
       "properties": {
         "external": {
@@ -18417,12 +18472,12 @@
           "format": "int32"
         },
         "replicasPerScale": {
-          "description": "ReplicasPerScale defines maximum replicas can be scaled up or down at once. The is use to prevent too aggresive scaling operations",
+          "description": "ReplicasPerScale defines maximum replicas can be scaled up or down at once. The is use to prevent too aggressive scaling operations",
           "type": "integer",
           "format": "int64"
         },
         "targetBufferUsage": {
-          "description": "TargetBufferUsage is used to define the target pencentage of usage of the buffer to be read. A valid and meaningful value should be less than the BufferUsageLimit defined in the Edge spec (or Pipeline spec), for example, 50. It only applies to UDF and Sink vertices as only they have buffers to read.",
+          "description": "TargetBufferUsage is used to define the target percentage of usage of the buffer to be read. A valid and meaningful value should be less than the BufferUsageLimit defined in the Edge spec (or Pipeline spec), for example, 50. It only applies to UDF and Sink vertices as only they have buffers to read.",
           "type": "integer",
           "format": "int64"
         },
@@ -18509,6 +18564,9 @@
         },
         "container": {
           "$ref": "#/definitions/io.numaproj.numaflow.v1alpha1.Container"
+        },
+        "groupBy": {
+          "$ref": "#/definitions/io.numaproj.numaflow.v1alpha1.GroupBy"
         }
       }
     },
@@ -18632,11 +18690,18 @@
           "x-kubernetes-patch-merge-key": "name",
           "x-kubernetes-patch-strategy": "merge"
         },
+        "initContainers": {
+          "description": "List of init containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/io.k8s.api.core.v1.Container"
+          }
+        },
         "interStepBufferServiceName": {
           "type": "string"
         },
         "limits": {
-          "description": "Limits define the limitations such as buffer read batch size for all the vertices of a pipleine, will override pipeline level settings",
+          "description": "Limits define the limitations such as buffer read batch size for all the vertices of a pipeline, will override pipeline level settings",
           "$ref": "#/definitions/io.numaproj.numaflow.v1alpha1.VertexLimits"
         },
         "metadata": {
@@ -18751,6 +18816,15 @@
         "maxDelay": {
           "description": "Maximum delay allowed for watermark calculation, defaults to \"0s\", which means no delay.",
           "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.Duration"
+        }
+      }
+    },
+    "io.numaproj.numaflow.v1alpha1.Window": {
+      "description": "Window describes windowing strategy",
+      "type": "object",
+      "properties": {
+        "fixed": {
+          "$ref": "#/definitions/io.numaproj.numaflow.v1alpha1.FixedWindow"
         }
       }
     },

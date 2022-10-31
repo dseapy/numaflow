@@ -105,13 +105,18 @@ message AbstractVertex {
   // +patchMergeKey=name
   repeated k8s.io.api.core.v1.Volume volumes = 16;
 
-  // Limits define the limitations such as buffer read batch size for all the vertices of a pipleine, will override pipeline level settings
+  // Limits define the limitations such as buffer read batch size for all the vertices of a pipeline, will override pipeline level settings
   // +optional
   optional VertexLimits limits = 17;
 
   // Settings for autoscaling
   // +optional
   optional Scale scale = 18;
+
+  // List of init containers belonging to the pod.
+  // More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+  // +optional
+  repeated k8s.io.api.core.v1.Container initContainers = 19;
 }
 
 message Authorization {
@@ -169,13 +174,19 @@ message Edge {
 
   optional string to = 2;
 
-  // Conditional forwarding, only allowed when "From" is a Sink or UDF
+  // Conditional forwarding, only allowed when "From" is a Sink or UDF.
   // +optional
   optional ForwardConditions conditions = 3;
 
-  // Limits define the limitations such as buffer read batch size for the edge, will override pipeline level settings
+  // Limits define the limitations such as buffer read batch size for the edge, will override pipeline level settings.
   // +optional
   optional EdgeLimits limits = 4;
+
+  // Parallelism is only effective when the "to" vertex is a reduce vertex,
+  // if it's provided, the default value is set to "1".
+  // Parallelism is ignored when the "to" vertex is not a reduce vertex.
+  // +optional
+  optional int32 parallelism = 5;
 }
 
 message EdgeLimits {
@@ -184,10 +195,15 @@ message EdgeLimits {
   // +optional
   optional uint64 bufferMaxLength = 1;
 
-  // BufferUsageLimit is used to define the pencentage of the buffer usage limit, a valid value should be less than 100, for example, 85.
+  // BufferUsageLimit is used to define the percentage of the buffer usage limit, a valid value should be less than 100, for example, 85.
   // It overrides the settings from pipeline limits.
   // +optional
   optional uint32 bufferUsageLimit = 2;
+}
+
+// FixedWindow describes a fixed window
+message FixedWindow {
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration length = 1;
 }
 
 message ForwardConditions {
@@ -322,6 +338,14 @@ message GetVertexPodSpecReq {
   repeated k8s.io.api.core.v1.EnvVar env = 4;
 }
 
+// GroupBy indicates it is a reducer UDF
+message GroupBy {
+  optional Window window = 1;
+
+  // +optional
+  optional bool keyed = 2;
+}
+
 message HTTPSource {
   // +optional
   optional Authorization auth = 1;
@@ -335,8 +359,10 @@ message HTTPSource {
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:shortName=isbsvc
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.status.type`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:openapi-gen=true
 message InterStepBufferService {
@@ -357,7 +383,7 @@ message InterStepBufferServiceList {
 }
 
 message InterStepBufferServiceSpec {
-  optional RedisBuferService redis = 1;
+  optional RedisBufferService redis = 1;
 
   optional JetStreamBufferService jetstream = 2;
 }
@@ -370,6 +396,8 @@ message InterStepBufferServiceStatus {
   optional string message = 3;
 
   optional BufferServiceConfig config = 4;
+
+  optional string type = 5;
 }
 
 message JetStreamBufferService {
@@ -661,6 +689,11 @@ message PersistenceStrategy {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
+// +kubebuilder:printcolumn:name="Vertices",type=integer,JSONPath=`.status.vertexCount`
+// +kubebuilder:printcolumn:name="Sources",type=integer,JSONPath=`.status.sourceCount`,priority=10
+// +kubebuilder:printcolumn:name="Sinks",type=integer,JSONPath=`.status.sinkCount`,priority=10
+// +kubebuilder:printcolumn:name="UDFs",type=integer,JSONPath=`.status.udfCount`,priority=10
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +k8s:openapi-gen=true
 message Pipeline {
@@ -681,11 +714,11 @@ message PipelineLimits {
   // BufferMaxLength is used to define the max length of a buffer
   // Only applies to UDF and Source vertice as only they do buffer write.
   // It can be overridden by the settings in vertex limits.
-  // +kubebuilder:default=30000
+  // +kubebuilder:default=50000
   // +optional
   optional uint64 bufferMaxLength = 2;
 
-  // BufferUsageLimit is used to define the pencentage of the buffer usage limit, a valid value should be less than 100, for example, 85.
+  // BufferUsageLimit is used to define the percentage of the buffer usage limit, a valid value should be less than 100, for example, 85.
   // Only applies to UDF and Source vertice as only they do buffer write.
   // It will be overridden by the settings in vertex limits.
   // +kubebuilder:default=80
@@ -722,7 +755,7 @@ message PipelineSpec {
   // +optional
   optional Lifecycle lifecycle = 4;
 
-  // Limits define the limitations such as buffer read batch size for all the vertices of a pipleine, they could be overridden by each vertex's settings
+  // Limits define the limitations such as buffer read batch size for all the vertices of a pipeline, they could be overridden by each vertex's settings
   // +kubebuilder:default={"readBatchSize": 500, "bufferMaxLength": 30000, "bufferUsageLimit": 80}
   // +optional
   optional PipelineLimits limits = 5;
@@ -743,9 +776,17 @@ message PipelineStatus {
   optional string message = 3;
 
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastUpdated = 4;
+
+  optional uint32 vertexCount = 5;
+
+  optional uint32 sourceCount = 6;
+
+  optional uint32 sinkCount = 7;
+
+  optional uint32 udfCount = 8;
 }
 
-message RedisBuferService {
+message RedisBufferService {
   // Native brings up a native Redis service
   optional NativeRedis native = 1;
 
@@ -829,14 +870,14 @@ message Scale {
   // +optional
   optional uint32 targetProcessingSeconds = 7;
 
-  // TargetBufferUsage is used to define the target pencentage of usage of the buffer to be read.
+  // TargetBufferUsage is used to define the target percentage of usage of the buffer to be read.
   // A valid and meaningful value should be less than the BufferUsageLimit defined in the Edge spec (or Pipeline spec), for example, 50.
   // It only applies to UDF and Sink vertices as only they have buffers to read.
   // +optional
   optional uint32 targetBufferUsage = 8;
 
   // ReplicasPerScale defines maximum replicas can be scaled up or down at once.
-  // The is use to prevent too aggresive scaling operations
+  // The is use to prevent too aggressive scaling operations
   // +optional
   optional uint32 replicasPerScale = 9;
 }
@@ -891,7 +932,10 @@ message UDF {
   optional Container container = 1;
 
   // +optional
-  optional Function builtin = 12;
+  optional Function builtin = 2;
+
+  // +optional
+  optional GroupBy groupBy = 3;
 }
 
 message UDSink {
@@ -991,5 +1035,11 @@ message Watermark {
   // +kubebuilder:default="0s"
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxDelay = 2;
+}
+
+// Window describes windowing strategy
+message Window {
+  // +optional
+  optional FixedWindow fixed = 1;
 }
 

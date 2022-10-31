@@ -22,7 +22,7 @@ import (
 
 // BuildWatermarkProgressors is used to populate fetchWatermark, and a map of publishWatermark with edge name as the key.
 // These are used as watermark progressors in the pipeline, and is attached to each edge of the vertex.
-// Fetcher has one-to-one relationship , whereas we have multiple publishers as the vertex can read only from one edge,
+// Fetcher has one-to-one relationship, whereas we have multiple publishers as the vertex can read only from one edge,
 // and it can write to many.
 // The function is used only when watermarking is enabled on the pipeline.
 func BuildWatermarkProgressors(ctx context.Context, vertexInstance *v1alpha1.VertexInstance) (fetch.Fetcher, map[string]publish.Publisher, error) {
@@ -102,10 +102,10 @@ func BuildSourcePublisherStores(ctx context.Context, vertexInstance *v1alpha1.Ve
 	}
 
 	// OT
-	otStoreBucket := isbsvc.JetStreamOTBucket(pipelineName, sourceBufferName)
-	otKVStore, err := jetstream.NewKVJetStreamKVStore(ctx, pipelineName, otStoreBucket, jsclient.NewInClusterJetStreamClient())
+	otStoreBucketName := isbsvc.JetStreamOTBucket(pipelineName, sourceBufferName)
+	otKVStore, err := jetstream.NewKVJetStreamKVStore(ctx, pipelineName, otStoreBucketName, jsclient.NewInClusterJetStreamClient())
 	if err != nil {
-		return nil, fmt.Errorf("failed at new OT KVJetStreamKVStore for source, OTBucket: %s, %w", otStoreBucket, err)
+		return nil, fmt.Errorf("failed at new OT KVJetStreamKVStore for source, OTBucket: %s, %w", otStoreBucketName, err)
 	}
 	sourcePublishStores := store.BuildWatermarkStore(hbKVStore, otKVStore)
 	return sourcePublishStores, nil
