@@ -81,10 +81,11 @@ spec:
       ttlSecondsAfterFinished: 600 # numaflow defaults to 30
       backoffLimit: 5 # numaflow defaults to 20
       # Pod metadata
-      labels:
-        my-label-name: my-label-value
-      annotations:
-        my-annotation-name: my-annotation-value
+      metadata:
+        labels:
+          my-label-name: my-label-value
+        annotations:
+          my-annotation-name: my-annotation-value
       # Pod spec
       nodeSelector:
         my-node-label-name: my-node-label-value
