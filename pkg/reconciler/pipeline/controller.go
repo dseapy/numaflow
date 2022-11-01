@@ -502,12 +502,18 @@ func buildISBBatchJob(pl *dfv1.Pipeline, image string, isbSvcConfig dfv1.BufferS
 	if len(randomStr) > 6 {
 		randomStr = strings.ToLower(randomStr[:6])
 	}
+	l := map[string]string{
+		dfv1.KeyPartOf:       dfv1.Project,
+		dfv1.KeyManagedBy:    dfv1.ControllerPipeline,
+		dfv1.KeyComponent:    dfv1.ComponentJob,
+		dfv1.KeyPipelineName: pl.Name,
+	}
 	spec := batchv1.JobSpec{
 		TTLSecondsAfterFinished: pointer.Int32(30),
 		BackoffLimit:            pointer.Int32(20),
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels:      map[string]string{},
+				Labels:      l,
 				Annotations: map[string]string{},
 			},
 			Spec: corev1.PodSpec{
@@ -553,9 +559,7 @@ func buildISBBatchJob(pl *dfv1.Pipeline, image string, isbSvcConfig dfv1.BufferS
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: pl.Namespace,
 			Name:      fmt.Sprintf("%s-buffer-%s-%v", pl.Name, jobType, randomStr),
-			Labels: map[string]string{
-				dfv1.KeyPipelineName: pl.Name,
-			},
+			Labels:    l,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(pl.GetObjectMeta(), dfv1.PipelineGroupVersionKind),
 			},

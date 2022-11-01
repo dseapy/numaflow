@@ -77,8 +77,8 @@ spec:
   templates:
     job:
       # Job spec
-      ttlSecondsAfterFinished: 30
-      backoffLimit: 20
+      ttlSecondsAfterFinished: 600 # numaflow defaults to 30
+      backoffLimit: 5 # numaflow defaults to 20
       # Pod metadata
       labels:
         my-label-name: my-label-value
