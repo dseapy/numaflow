@@ -511,9 +511,6 @@ message JobTemplate {
   // +optional
   optional ContainerTemplate containerTemplate = 2;
 
-  // +optional
-  optional ContainerTemplate initContainerTemplate = 3;
-
   // ttlSecondsAfterFinished limits the lifetime of a Job that has finished
   // execution (either Complete or Failed). If this field is set,
   // ttlSecondsAfterFinished after the Job finishes, it is eligible to be

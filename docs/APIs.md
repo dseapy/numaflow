@@ -1988,16 +1988,6 @@ ContainerTemplate </a> </em>
 </tr>
 <tr>
 <td>
-<code>initContainerTemplate</code></br> <em>
-<a href="#numaflow.numaproj.io/v1alpha1.ContainerTemplate">
-ContainerTemplate </a> </em>
-</td>
-<td>
-<em>(Optional)</em>
-</td>
-</tr>
-<tr>
-<td>
 <code>ttlSecondsAfterFinished</code></br> <em> int32 </em>
 </td>
 <td>

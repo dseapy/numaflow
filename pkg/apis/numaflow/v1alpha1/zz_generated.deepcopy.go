@@ -840,11 +840,6 @@ func (in *JobTemplate) DeepCopyInto(out *JobTemplate) {
 		*out = new(ContainerTemplate)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.InitContainerTemplate != nil {
-		in, out := &in.InitContainerTemplate, &out.InitContainerTemplate
-		*out = new(ContainerTemplate)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.TTLSecondsAfterFinished != nil {
 		in, out := &in.TTLSecondsAfterFinished, &out.TTLSecondsAfterFinished
 		*out = new(int32)
