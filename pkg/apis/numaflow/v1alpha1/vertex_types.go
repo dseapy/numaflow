@@ -170,13 +170,6 @@ func (v Vertex) GetPodSpec(req GetVertexPodSpecReq) (*corev1.PodSpec, error) {
 	}
 	envVars = append(envVars, v.commonEnvs()...)
 	envVars = append(envVars, req.Env...)
-	resources := standardResources
-	if v.Spec.ContainerTemplate != nil {
-		resources = v.Spec.ContainerTemplate.Resources
-		if len(v.Spec.ContainerTemplate.Env) > 0 {
-			envVars = append(envVars, v.Spec.ContainerTemplate.Env...)
-		}
-	}
 
 	varVolumeName := "var-run-numaflow"
 	volumes := []corev1.Volume{
@@ -194,7 +187,7 @@ func (v Vertex) GetPodSpec(req GetVertexPodSpecReq) (*corev1.PodSpec, error) {
 		env:             envVars,
 		image:           req.Image,
 		imagePullPolicy: req.PullPolicy,
-		resources:       resources,
+		resources:       standardResources,
 		volumeMounts:    volumeMounts,
 	})
 	if err != nil {
@@ -230,18 +223,14 @@ func (v Vertex) GetPodSpec(req GetVertexPodSpecReq) (*corev1.PodSpec, error) {
 	}
 
 	spec := &corev1.PodSpec{
-		Subdomain:          v.GetHeadlessServiceName(),
-		NodeSelector:       v.Spec.NodeSelector,
-		Tolerations:        v.Spec.Tolerations,
-		SecurityContext:    v.Spec.SecurityContext,
-		ImagePullSecrets:   v.Spec.ImagePullSecrets,
-		PriorityClassName:  v.Spec.PriorityClassName,
-		Priority:           v.Spec.Priority,
-		Affinity:           v.Spec.Affinity,
-		ServiceAccountName: v.Spec.ServiceAccountName,
-		Volumes:            append(volumes, v.Spec.Volumes...),
-		InitContainers:     v.getInitContainers(req),
-		Containers:         containers,
+		Subdomain:      v.GetHeadlessServiceName(),
+		Volumes:        append(volumes, v.Spec.Volumes...),
+		InitContainers: v.getInitContainers(req),
+		Containers:     containers,
+	}
+	v.Spec.AbstractPodTemplate.ApplyToPodSpec(spec)
+	if v.Spec.ContainerTemplate != nil {
+		v.Spec.ContainerTemplate.ApplyToContainers(spec.Containers)
 	}
 	return spec, nil
 }
@@ -261,6 +250,9 @@ func (v Vertex) getInitContainers(req GetVertexPodSpecReq) []corev1.Container {
 			Resources:       standardResources,
 			Args:            []string{"isbsvc-buffer-validate", "--isbsvc-type=" + string(req.ISBSvcType)},
 		},
+	}
+	if v.Spec.InitContainerTemplate != nil {
+		v.Spec.InitContainerTemplate.ApplyToContainers(initContainers)
 	}
 	return append(initContainers, v.Spec.InitContainers...)
 }

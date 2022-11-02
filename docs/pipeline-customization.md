@@ -53,7 +53,14 @@ spec:
                     values:
                       - my-pipeline
               topologyKey: kubernetes.io/hostname
-      # Container
+      # Containers
+      initContainerTemplate:
+        env:
+          - name: MY_ENV_NAME
+            value: my-env-value
+        resources:
+          limits:
+            memory: 500Mi
       containerTemplate:
         env:
           - name: MY_ENV_NAME
