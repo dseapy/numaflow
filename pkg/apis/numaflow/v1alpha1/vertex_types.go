@@ -230,7 +230,7 @@ func (v Vertex) GetPodSpec(req GetVertexPodSpecReq) (*corev1.PodSpec, error) {
 	}
 	v.Spec.AbstractPodTemplate.ApplyToPodSpec(spec)
 	if v.Spec.ContainerTemplate != nil {
-		v.Spec.ContainerTemplate.ApplyToContainers(spec.Containers)
+		v.Spec.ContainerTemplate.ApplyToNumaflowContainers(spec.Containers)
 	}
 	return spec, nil
 }
@@ -252,7 +252,7 @@ func (v Vertex) getInitContainers(req GetVertexPodSpecReq) []corev1.Container {
 		},
 	}
 	if v.Spec.InitContainerTemplate != nil {
-		v.Spec.InitContainerTemplate.ApplyToContainers(initContainers)
+		v.Spec.InitContainerTemplate.ApplyToNumaflowContainers(initContainers)
 	}
 	return append(initContainers, v.Spec.InitContainers...)
 }

@@ -94,3 +94,5 @@ spec:
             cpu: "1"
             memory: 4Gi
 ```
+
+Container resources for [user init-containers](./init-containers.md) are instead set at `.spec.vertices[*].initContainers[*].resources`.

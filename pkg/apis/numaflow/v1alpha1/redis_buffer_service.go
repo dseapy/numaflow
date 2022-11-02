@@ -376,6 +376,9 @@ redis_exporter`},
 				Command:         []string{"/bin/bash", "-ec", "chown -R 1001:1001 /data"},
 			},
 		}
+		if nr.InitContainerTemplate != nil {
+			nr.InitContainerTemplate.ApplyToContainer(&spec.Template.Spec.InitContainers[0])
+		}
 		if spec.Template.Spec.SecurityContext == nil {
 			spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
 		}

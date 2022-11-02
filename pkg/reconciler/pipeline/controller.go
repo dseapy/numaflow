@@ -532,7 +532,7 @@ func buildISBBatchJob(pl *dfv1.Pipeline, image string, isbSvcConfig dfv1.BufferS
 		}
 		jt.AbstractPodTemplate.ApplyToPodTemplateSpec(&spec.Template)
 		if jt.ContainerTemplate != nil {
-			jt.ContainerTemplate.ApplyToContainers(spec.Template.Spec.Containers)
+			jt.ContainerTemplate.ApplyToNumaflowContainers(spec.Template.Spec.Containers)
 		}
 	}
 	return &batchv1.Job{

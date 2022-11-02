@@ -12,14 +12,15 @@ type ContainerTemplate struct {
 
 // ApplyToContainer updates the Container with the values from the ContainerTemplate
 func (ct *ContainerTemplate) ApplyToContainer(c *corev1.Container) {
+	// currently only doing resources & env, ignoring imagePullPolicy & securityContext
 	c.Resources = ct.Resources
 	if len(ct.Env) > 0 {
 		c.Env = append(c.Env, ct.Env...)
 	}
 }
 
-// ApplyToContainers updates any numa or init containers with the values from the ContainerTemplate
-func (ct *ContainerTemplate) ApplyToContainers(containers []corev1.Container) {
+// ApplyToNumaflowContainers updates any numa or init containers with the values from the ContainerTemplate
+func (ct *ContainerTemplate) ApplyToNumaflowContainers(containers []corev1.Container) {
 	for i := range containers {
 		if containers[i].Name == CtrMain || containers[i].Name == CtrInit {
 			ct.ApplyToContainer(&containers[i])

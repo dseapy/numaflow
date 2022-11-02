@@ -233,7 +233,7 @@ func (p Pipeline) GetDaemonDeploymentObj(req GetDaemonDeploymentReq) (*appv1.Dep
 		spec.Replicas = dt.Replicas
 		dt.AbstractPodTemplate.ApplyToPodTemplateSpec(&spec.Template)
 		if dt.ContainerTemplate != nil {
-			dt.ContainerTemplate.ApplyToContainers(spec.Template.Spec.Containers)
+			dt.ContainerTemplate.ApplyToNumaflowContainers(spec.Template.Spec.Containers)
 		}
 	}
 	return &appv1.Deployment{
