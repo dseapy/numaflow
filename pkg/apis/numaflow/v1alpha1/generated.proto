@@ -520,13 +520,13 @@ message JobTemplate {
   // the Job becomes eligible to be deleted immediately after it finishes.
   // Numaflow defaults to 30
   // +optional
-  optional int32 ttlSecondsAfterFinished = 4;
+  optional int32 ttlSecondsAfterFinished = 3;
 
   // Specifies the number of retries before marking this job failed.
   // More info: https://kubernetes.io/docs/concepts/workloads/controllers/job/#pod-backoff-failure-policy
   // Numaflow defaults to 20
   // +optional
-  optional int32 backoffLimit = 5;
+  optional int32 backoffLimit = 4;
 }
 
 message KafkaSink {

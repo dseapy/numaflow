@@ -14,10 +14,10 @@ type JobTemplate struct {
 	// the Job becomes eligible to be deleted immediately after it finishes.
 	// Numaflow defaults to 30
 	// +optional
-	TTLSecondsAfterFinished *int32 `json:"ttlSecondsAfterFinished,omitempty" protobuf:"varint,4,opt,name=ttlSecondsAfterFinished"`
+	TTLSecondsAfterFinished *int32 `json:"ttlSecondsAfterFinished,omitempty" protobuf:"varint,3,opt,name=ttlSecondsAfterFinished"`
 	// Specifies the number of retries before marking this job failed.
 	// More info: https://kubernetes.io/docs/concepts/workloads/controllers/job/#pod-backoff-failure-policy
 	// Numaflow defaults to 20
 	// +optional
-	BackoffLimit *int32 `json:"backoffLimit,omitempty" protobuf:"varint,5,opt,name=backoffLimit"`
+	BackoffLimit *int32 `json:"backoffLimit,omitempty" protobuf:"varint,4,opt,name=backoffLimit"`
 }
