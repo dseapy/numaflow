@@ -20,25 +20,27 @@ type JetStreamBufferService struct {
 	// ContainerTemplate contains customized spec for NATS container
 	// +optional
 	ContainerTemplate *ContainerTemplate `json:"containerTemplate,omitempty" protobuf:"bytes,3,opt,name=containerTemplate"`
+	// +optional
+	InitContainerTemplate *ContainerTemplate `json:"initContainerTemplate,omitempty" protobuf:"bytes,4,opt,name=initContainerTemplate"`
 	// ReloaderContainerTemplate contains customized spec for config reloader container
 	// +optional
-	ReloaderContainerTemplate *ContainerTemplate `json:"reloaderContainerTemplate,omitempty" protobuf:"bytes,4,opt,name=reloaderContainerTemplate"`
+	ReloaderContainerTemplate *ContainerTemplate `json:"reloaderContainerTemplate,omitempty" protobuf:"bytes,5,opt,name=reloaderContainerTemplate"`
 	// MetricsContainerTemplate contains customized spec for metrics container
 	// +optional
-	MetricsContainerTemplate *ContainerTemplate `json:"metricsContainerTemplate,omitempty" protobuf:"bytes,5,opt,name=metricsContainerTemplate"`
+	MetricsContainerTemplate *ContainerTemplate `json:"metricsContainerTemplate,omitempty" protobuf:"bytes,6,opt,name=metricsContainerTemplate"`
 	// +optional
-	Persistence *PersistenceStrategy `json:"persistence,omitempty" protobuf:"bytes,6,opt,name=persistence"`
+	Persistence *PersistenceStrategy `json:"persistence,omitempty" protobuf:"bytes,7,opt,name=persistence"`
 	// +optional
-	AbstractPodTemplate `json:",inline" protobuf:"bytes,7,opt,name=abstractPodTemplate"`
+	AbstractPodTemplate `json:",inline" protobuf:"bytes,8,opt,name=abstractPodTemplate"`
 	// JetStream configuration, if not specified, global settings in numaflow-controller-config will be used.
 	// See https://docs.nats.io/running-a-nats-service/configuration#jetstream.
 	// Only configure "max_memory_store" or "max_file_store", do not set "store_dir" as it has been hardcoded.
 	// +optional
-	Settings *string `json:"settings,omitempty" protobuf:"bytes,8,opt,name=settings"`
+	Settings *string `json:"settings,omitempty" protobuf:"bytes,9,opt,name=settings"`
 	// Optional arguments to start nats-server. For example, "-D" to enable debugging output, "-DV" to enable debugging and tracing.
 	// Check https://docs.nats.io/ for all the available arguments.
 	// +optional
-	StartArgs []string `json:"startArgs,omitempty" protobuf:"bytes,9,rep,name=startArgs"`
+	StartArgs []string `json:"startArgs,omitempty" protobuf:"bytes,10,rep,name=startArgs"`
 	// Optional configuration for the streams, consumers and buckets to be created in this JetStream service, if specified, it will be merged with the default configuration in numaflow-controller-config.
 	// It accepts a YAML format configuration, it may include 4 sections, "stream", "consumer", "otBucket" and "procBucket".
 	// Available fields under "stream" include "retention" (e.g. interest, limits, workerQueue), "maxMsgs", "maxAge" (e.g. 72h), "replicas" (1, 3, 5), "duplicates" (e.g. 5m).
@@ -46,16 +48,16 @@ type JetStreamBufferService struct {
 	// Available fields under "otBucket" include "maxValueSize", "history", "ttl" (e.g. 72h), "maxBytes", "replicas" (1, 3, 5).
 	// Available fields under "procBucket" include "maxValueSize", "history", "ttl" (e.g. 72h), "maxBytes", "replicas" (1, 3, 5).
 	// +optional
-	BufferConfig *string `json:"bufferConfig,omitempty" protobuf:"bytes,10,opt,name=bufferConfig"`
+	BufferConfig *string `json:"bufferConfig,omitempty" protobuf:"bytes,11,opt,name=bufferConfig"`
 	// Whether encrypt the data at rest, defaults to false
 	// Enabling encryption might impact the performance, see https://docs.nats.io/running-a-nats-service/nats_admin/jetstream_admin/encryption_at_rest for the detail
 	// Toggling the value will impact encypting/decrypting existing messages.
 	// +optional
-	Encryption bool `json:"encryption,omitempty" protobuf:"bytes,11,opt,name=encryption"`
+	Encryption bool `json:"encryption,omitempty" protobuf:"bytes,12,opt,name=encryption"`
 	// Whether enable TLS, defaults to false
 	// Enabling TLS might impact the performance
 	// +optional
-	TLS bool `json:"tls,omitempty" protobuf:"bytes,12,opt,name=tls"`
+	TLS bool `json:"tls,omitempty" protobuf:"bytes,13,opt,name=tls"`
 }
 
 func (j JetStreamBufferService) GetReplicas() int {

@@ -53,12 +53,14 @@ type NativeRedis struct {
 	// +optional
 	MetricsContainerTemplate *ContainerTemplate `json:"metricsContainerTemplate,omitempty" protobuf:"bytes,5,opt,name=metricsContainerTemplate"`
 	// +optional
-	Persistence *PersistenceStrategy `json:"persistence,omitempty" protobuf:"bytes,6,opt,name=persistence"`
+	InitContainerTemplate *ContainerTemplate `json:"initContainerTemplate,omitempty" protobuf:"bytes,6,opt,name=initContainerTemplate"`
 	// +optional
-	AbstractPodTemplate `json:",inline" protobuf:"bytes,7,opt,name=abstractPodTemplate"`
+	Persistence *PersistenceStrategy `json:"persistence,omitempty" protobuf:"bytes,7,opt,name=persistence"`
+	// +optional
+	AbstractPodTemplate `json:",inline" protobuf:"bytes,8,opt,name=abstractPodTemplate"`
 	// Redis configuration, if not specified, global settings in numaflow-controller-config will be used.
 	// +optional
-	Settings *RedisSettings `json:"settings,omitempty" protobuf:"bytes,8,opt,name=settings"`
+	Settings *RedisSettings `json:"settings,omitempty" protobuf:"bytes,9,opt,name=settings"`
 }
 
 type RedisSettings struct {

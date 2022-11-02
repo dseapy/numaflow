@@ -352,21 +352,23 @@ type AbstractVertex struct {
 	// +optional
 	ContainerTemplate *ContainerTemplate `json:"containerTemplate,omitempty" protobuf:"bytes,5,rep,name=containerTemplate"`
 	// +optional
-	AbstractPodTemplate `json:",inline" protobuf:"bytes,6,opt,name=abstractPodTemplate"`
+	InitContainerTemplate *ContainerTemplate `json:"initContainerTemplate,omitempty" protobuf:"bytes,6,opt,name=initContainerTemplate"`
+	// +optional
+	AbstractPodTemplate `json:",inline" protobuf:"bytes,7,opt,name=abstractPodTemplate"`
 	// +optional
 	// +patchStrategy=merge
 	// +patchMergeKey=name
-	Volumes []corev1.Volume `json:"volumes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,7,rep,name=volumes"`
+	Volumes []corev1.Volume `json:"volumes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,8,rep,name=volumes"`
 	// Limits define the limitations such as buffer read batch size for all the vertices of a pipeline, will override pipeline level settings
 	// +optional
-	Limits *VertexLimits `json:"limits,omitempty" protobuf:"bytes,8,opt,name=limits"`
+	Limits *VertexLimits `json:"limits,omitempty" protobuf:"bytes,9,opt,name=limits"`
 	// Settings for autoscaling
 	// +optional
-	Scale Scale `json:"scale,omitempty" protobuf:"bytes,9,opt,name=scale"`
+	Scale Scale `json:"scale,omitempty" protobuf:"bytes,10,opt,name=scale"`
 	// List of init containers belonging to the pod.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 	// +optional
-	InitContainers []corev1.Container `json:"initContainers,omitempty" protobuf:"bytes,10,rep,name=initContainers"`
+	InitContainers []corev1.Container `json:"initContainers,omitempty" protobuf:"bytes,11,rep,name=initContainers"`
 }
 
 // Scale defines the parameters for autoscaling.
