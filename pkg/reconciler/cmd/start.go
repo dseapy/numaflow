@@ -49,13 +49,13 @@ func Start(namespaced bool, managedNamespace string) {
 		logger.Fatalw("Failed to load global configuration file", zap.Error(err))
 	}
 	pipelineTemplates, err := reconciler.LoadPipelineTemplates(func(err error) {
-		logger.Errorw("Failed to reload pipeline-templates file", zap.Error(err))
+		logger.Errorw("Failed to reload pipeline templates file", zap.Error(err))
 	})
 	if err != nil {
-		logger.Fatalw("Failed to load pipeline-templates file", zap.Error(err))
+		logger.Fatalw("Failed to load pipeline templates file", zap.Error(err))
 	}
 	if pipelineTemplates != nil {
-		logger.Info("Successfully loaded provided pipeline-templates file")
+		logger.Info("Successfully loaded provided pipeline templates file")
 	}
 
 	image := sharedutil.LookupEnvStringOr(dfv1.EnvImage, "")

@@ -17,13 +17,13 @@ func LoadPipelineTemplates(onErrorReloading func(error)) (*dfv1.Templates, error
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			return nil, nil
 		} else {
-			return nil, fmt.Errorf("failed to load pipeline-templates file. %w", err)
+			return nil, fmt.Errorf("failed to load pipeline templates file. %w", err)
 		}
 	}
 	r := &dfv1.Templates{}
 	err = v.Unmarshal(r)
 	if err != nil {
-		return nil, fmt.Errorf("failed unmarshal pipeline-templates file. %w", err)
+		return nil, fmt.Errorf("failed unmarshal pipeline templates file. %w", err)
 	}
 	v.WatchConfig()
 	v.OnConfigChange(func(e fsnotify.Event) {
