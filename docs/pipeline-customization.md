@@ -1,10 +1,10 @@
 # Pipeline Customization
 
 There is an optional `.spec.templates` field in the `Pipeline` resource which may be used to customize kubernetes resources owned by the Pipeline.
-These override anything specified in the [Controller ConfigMap Pipeline Templates](./controller-configmap.md#pipeline-templates).
+This merges with (overriding where appropriate) anything specified in the [Controller ConfigMap Pipeline Templates](./controller-configmap.md#pipeline-templates).
 
 Individual vertex customization is described separately in more detail (i.e. [Environment Variables](./environment-variables.md), [Container Resources](./container-resources.md), etc.)
-and take precedence over any pipeline templates.
+and takes precedence over any vertex templates.
 
 ## Component customization
 
@@ -101,10 +101,5 @@ spec:
 ```
 
 ## Vertex customization
-* `vertex` currently has 3 possible fields:
-* `podTemplate` has the same structure as `.spec.vertices[*]` in a Pipeline, however only the fields corresponding to a Pod metadata or spec.
-  Specifically, it supports the same pod metadata and spec fields that daemon and job support, see [Pipeline customization](./pipeline-customization.md) examples.
-    * `containerTemplate` has the same structure as `.spec.vertices[*].containerTemplate` in a Pipeline.
-    * `initContainerTemplate` has the same structure as `.spec.vertices[*].initContainerTemplate` in a Pipeline.
 
 See `Component customization` described above.

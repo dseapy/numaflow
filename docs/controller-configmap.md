@@ -51,9 +51,9 @@ data:
 
 Pipeline Templates are used to customize Pipeline components and can be specified in 2 places:
 * **In the controller ConfigMap** (described here), which affect all pipelines managed by the controller. The
-    numaflow-controller logs `Successfully loaded provided pipeline templates file` if it detects pipeline templates.
+    logs will show `Successfully loaded provided pipeline templates file` if it detects pipeline templates.
 * **In each Pipeline** (described in [Pipeline customization](./pipeline-customization.md)), which affect that 
-    single pipeline and overrides what is specified in the controller configmap.
+    single pipeline and takes precedence what is specified in the controller configmap.
 
 In either case the configuration is the same, the only difference being that the ConfigMap has `.data."pipeline-templates.yaml"`
 which contains a string in `yaml` format and the Pipeline has `.spec.templates` which contains yaml. Below shows how to
@@ -65,6 +65,8 @@ kind: ConfigMap
 metadata:
   name: numaflow-controller-config
 data:
+  controller-config.yaml: |
+    ...
   pipeline-templates.yaml: |
     daemon:
       replicas: 2
