@@ -91,7 +91,7 @@ func init() {
 
 func Test_NewReconciler(t *testing.T) {
 	cl := fake.NewClientBuilder().Build()
-	r := NewReconciler(cl, scheme.Scheme, fakeConfig, testFlowImage, zaptest.NewLogger(t).Sugar())
+	r := NewReconciler(cl, scheme.Scheme, fakeConfig, nil, testFlowImage, zaptest.NewLogger(t).Sugar())
 	_, ok := r.(*pipelineReconciler)
 	assert.True(t, ok)
 }

@@ -23,12 +23,12 @@ spec:
       # Pod metadata
       metadata:
         labels:
-          my-label-name: my-label-value
+          my-label-key: my-label-value
         annotations:
-          my-annotation-name: my-annotation-value
+          my-annotation-key: my-annotation-value
       # Pod spec
       nodeSelector:
-        my-node-label-name: my-node-label-value
+        my-node-label-key: my-node-label-value
       tolerations:
         - key: "my-example-key"
           operator: "Exists"
@@ -70,7 +70,7 @@ spec:
             memory: 500Mi
 ```
 
-## Jobs
+## Job
 
 The following example shows how to configure kubernetes Jobs owned by a Pipeline with all currently supported fields.
 
@@ -90,12 +90,12 @@ spec:
       # Pod metadata
       metadata:
         labels:
-          my-label-name: my-label-value
+          my-label-key: my-label-value
         annotations:
-          my-annotation-name: my-annotation-value
+          my-annotation-key: my-annotation-value
       # Pod spec
       nodeSelector:
-        my-node-label-name: my-node-label-value
+        my-node-label-key: my-node-label-value
       tolerations:
         - key: "my-example-key"
           operator: "Exists"

@@ -30,15 +30,16 @@ type vertexReconciler struct {
 	client client.Client
 	scheme *runtime.Scheme
 
-	config *reconciler.GlobalConfig
-	image  string
-	logger *zap.SugaredLogger
+	config            *reconciler.GlobalConfig
+	pipelineTemplates *reconciler.PipelineTemplates
+	image             string
+	logger            *zap.SugaredLogger
 
 	scaler *scaling.Scaler
 }
 
-func NewReconciler(client client.Client, scheme *runtime.Scheme, config *reconciler.GlobalConfig, image string, scaler *scaling.Scaler, logger *zap.SugaredLogger) reconcile.Reconciler {
-	return &vertexReconciler{client: client, scheme: scheme, config: config, image: image, scaler: scaler, logger: logger}
+func NewReconciler(client client.Client, scheme *runtime.Scheme, config *reconciler.GlobalConfig, pipelineTemplates *reconciler.PipelineTemplates, image string, scaler *scaling.Scaler, logger *zap.SugaredLogger) reconcile.Reconciler {
+	return &vertexReconciler{client: client, scheme: scheme, config: config, pipelineTemplates: pipelineTemplates, image: image, scaler: scaler, logger: logger}
 }
 
 func (r *vertexReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
