@@ -47,19 +47,18 @@ data:
             startCommand: /nats-server
 ```
 
-### Pipeline Templates
+### Pipeline Templates Configuration
 
-Pipeline Templates provide default Pipeline component configuration, reducing the need to duplicate common configuration in each Pipeline managed by the controller.
+Pipeline Templates are used to customize Pipeline components and can be specified in 2 places:
+* **In the controller ConfigMap** (described here), which affect all pipelines managed by the controller. The
+    numaflow-controller logs `Successfully loaded provided pipeline-templates file` if it detects pipeline templates.
+* **In each Pipeline** (described in [Pipeline customization](./pipeline-customization.md)), which affect that 
+    single pipeline and overrides what is specified in the controller configmap.
 
-The numaflow-controller logs `Successfully loaded provided pipeline-templates file` if it detects pipeline templates.
+In either case the configuration is the same, the only difference being that the ConfigMap has `.data."pipeline-templates.yaml"`
+which contains a string in `yaml` format and the Pipeline has `.spec.templates` which contains yaml. Below shows how to
+populate the ConfigMap, see the [Pipeline customization](./pipeline-customization.md) for more details.
 
-* `daemon` has the same structure as `.spec.templates.daemon` in a Pipeline, see [Daemon customization](./pipeline-customization.md#daemon-deployment) example.
-* `job` has the same structure as `.spec.templates.job` in a Pipeline, see [Job customization](./pipeline-customization.md#job) example.
-* `vertex` currently has 3 possible fields:
-    * `podTemplate` has the same structure as `.spec.vertices[*]` in a Pipeline, however only the fields corresponding to a Pod metadata or spec.
-  Specifically, it supports the same pod metadata and spec fields that daemon and job support, see [Pipeline customization](./pipeline-customization.md) examples.
-    * `containerTemplate` has the same structure as `.spec.vertices[*].containerTemplate` in a Pipeline.
-    * `initContainerTemplate` has the same structure as `.spec.vertices[*].initContainerTemplate` in a Pipeline.
 ```yaml
 apiVersion: v1
 kind: ConfigMap

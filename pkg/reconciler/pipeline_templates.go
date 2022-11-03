@@ -7,21 +7,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// PipelineTemplates contains default values for pipeline components, if provided
-// intended to be populated from the configmap attached to the controller manager.
-type PipelineTemplates struct {
-	DaemonTemplate *dfv1.DaemonTemplate `json:"daemon"`
-	JobTemplate    *dfv1.JobTemplate    `json:"job"`
-	VertexTemplate *VertexTemplate      `json:"vertex"`
-}
-
-type VertexTemplate struct {
-	PodTemplate           *dfv1.AbstractPodTemplate `json:"podTemplate"`
-	ContainerTemplate     *dfv1.ContainerTemplate   `json:"containerTemplate"`
-	InitContainerTemplate *dfv1.ContainerTemplate   `json:"initContainerTemplate"`
-}
-
-func LoadPipelineTemplates(onErrorReloading func(error)) (*PipelineTemplates, error) {
+func LoadPipelineTemplates(onErrorReloading func(error)) (*dfv1.Templates, error) {
 	v := viper.New()
 	v.SetConfigName("pipeline-templates")
 	v.SetConfigType("yaml")
@@ -34,7 +20,7 @@ func LoadPipelineTemplates(onErrorReloading func(error)) (*PipelineTemplates, er
 			return nil, fmt.Errorf("failed to load pipeline-templates file. %w", err)
 		}
 	}
-	r := &PipelineTemplates{}
+	r := &dfv1.Templates{}
 	err = v.Unmarshal(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed unmarshal pipeline-templates file. %w", err)

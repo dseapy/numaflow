@@ -406,6 +406,9 @@ type Templates struct {
 	// JobTemplate is used to customize Jobs
 	// +optional
 	JobTemplate *JobTemplate `json:"job,omitempty" protobuf:"bytes,2,opt,name=job"`
+	// VertexTemplate is used to customize Vertices
+	// +optional
+	VertexTemplate *VertexTemplate `json:"vertex,omitempty" protobuf:"bytes,2,opt,name=vertex"`
 }
 
 type PipelineLimits struct {
