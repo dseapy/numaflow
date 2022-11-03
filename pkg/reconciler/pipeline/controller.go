@@ -39,14 +39,14 @@ type pipelineReconciler struct {
 	client client.Client
 	scheme *runtime.Scheme
 
-	config            *reconciler.GlobalConfig
-	pipelineTemplates *reconciler.PipelineTemplates
-	image             string
-	logger            *zap.SugaredLogger
+	config    *reconciler.GlobalConfig
+	templates *dfv1.Templates
+	image     string
+	logger    *zap.SugaredLogger
 }
 
-func NewReconciler(client client.Client, scheme *runtime.Scheme, config *reconciler.GlobalConfig, pipelineTemplates *reconciler.PipelineTemplates, image string, logger *zap.SugaredLogger) reconcile.Reconciler {
-	return &pipelineReconciler{client: client, scheme: scheme, config: config, pipelineTemplates: pipelineTemplates, image: image, logger: logger}
+func NewReconciler(client client.Client, scheme *runtime.Scheme, config *reconciler.GlobalConfig, templates *dfv1.Templates, image string, logger *zap.SugaredLogger) reconcile.Reconciler {
+	return &pipelineReconciler{client: client, scheme: scheme, config: config, templates: templates, image: image, logger: logger}
 }
 
 func (r *pipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
