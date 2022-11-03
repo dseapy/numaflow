@@ -153,7 +153,7 @@ func init() {
 
 func Test_NewReconciler(t *testing.T) {
 	cl := fake.NewClientBuilder().Build()
-	r := NewReconciler(cl, scheme.Scheme, fakeConfig, nil, testFlowImage, scaling.NewScaler(cl), zaptest.NewLogger(t).Sugar())
+	r := NewReconciler(cl, scheme.Scheme, fakeConfig, testFlowImage, scaling.NewScaler(cl), zaptest.NewLogger(t).Sugar())
 	_, ok := r.(*vertexReconciler)
 	assert.True(t, ok)
 }

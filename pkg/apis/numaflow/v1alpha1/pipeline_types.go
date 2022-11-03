@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"os"
 	"strings"
 	"time"
@@ -409,6 +410,30 @@ type Templates struct {
 	// VertexTemplate is used to customize Vertices
 	// +optional
 	VertexTemplate *VertexTemplate `json:"vertex,omitempty" protobuf:"bytes,3,opt,name=vertex"`
+}
+
+// UpdateWithDefaultsFrom updates the template by doing a strategic merge patch, defaulting to the passed templates
+func (tpl *Templates) UpdateWithDefaultsFrom(defaultTemplate *Templates) error {
+	if tpl == nil || defaultTemplate == nil {
+		return nil
+	}
+	tplBytes, err := json.Marshal(tpl)
+	if err != nil {
+		return err
+	}
+	defaultTemplateBytes, err := json.Marshal(defaultTemplate)
+	if err != nil {
+		return err
+	}
+	updatedBytes, err := strategicpatch.StrategicMergePatch(defaultTemplateBytes, tplBytes, Templates{})
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(updatedBytes, tpl)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type PipelineLimits struct {

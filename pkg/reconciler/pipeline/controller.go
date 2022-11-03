@@ -61,11 +61,16 @@ func (r *pipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	log := r.logger.With("namespace", pl.Namespace).With("pipeline", pl.Name)
 	plCopy := pl.DeepCopy()
 	ctx = logging.WithLogger(ctx, log)
+	if err := plCopy.Spec.Templates.UpdateWithDefaultsFrom(r.templates); err != nil {
+		r.logger.Errorw("Unable to create merged pipeline templates", err)
+		return ctrl.Result{}, err
+	}
 
 	result, reconcileErr := r.reconcile(ctx, plCopy)
 	if reconcileErr != nil {
 		log.Errorw("Reconcile error", zap.Error(reconcileErr))
 	}
+	plCopy.Spec.Templates = pl.Spec.Templates
 	plCopy.Status.LastUpdated = metav1.Now()
 	if needsUpdate(pl, plCopy) {
 		if err := r.client.Update(ctx, plCopy); err != nil {
