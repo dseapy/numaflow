@@ -416,7 +416,11 @@ type Templates struct {
 
 // UpdateWithDefaultsFrom updates the template by doing a strategic merge patch, defaulting to the passed templates
 func (tpl *Templates) UpdateWithDefaultsFrom(defaultTemplate *Templates) error {
-	if tpl == nil || defaultTemplate == nil {
+	if defaultTemplate == nil {
+		return nil
+	}
+	if tpl == nil {
+		*tpl = *defaultTemplate.DeepCopy()
 		return nil
 	}
 	tplBytes, err := json.Marshal(tpl)
