@@ -27,7 +27,9 @@ func LoadPipelineTemplates(onErrorReloading func(error)) (*dfv1.Templates, error
 	}
 	v.WatchConfig()
 	v.OnConfigChange(func(e fsnotify.Event) {
-		//TODO: is this thread safe?  also in config.go. if not, add lock or just require restart?
+		//TODO: is this thread safe?  also in config.go. if not
+		//  * is it likely to matter (config reload at same time as being used in reconcile)?
+		//  * does it make sense to add lock or just require restart?
 		//  If removing, don't need to pass entire Templates to vertex controller, just VertexTemplate needed
 		err = v.Unmarshal(r)
 		if err != nil {
