@@ -213,7 +213,10 @@ func (r *pipelineReconciler) reconcileNonLifecycleChanges(ctx context.Context, p
 			newBuffers[b.Name] = b
 		}
 	}
-	newObjs := buildVertices(pl)
+	newObjs, err := buildVertices(pl)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to build vertices, err: %w", err)
+	}
 	for vertexName, newObj := range newObjs {
 		if oldObj, existing := existingObjs[vertexName]; !existing {
 			if err := r.client.Create(ctx, &newObj); err != nil {
@@ -423,7 +426,7 @@ func needsUpdate(old, new *dfv1.Pipeline) bool {
 	return false
 }
 
-func buildVertices(pl *dfv1.Pipeline) map[string]dfv1.Vertex {
+func buildVertices(pl *dfv1.Pipeline) (map[string]dfv1.Vertex, error) {
 	result := make(map[string]dfv1.Vertex)
 	for _, v := range pl.Spec.Vertices {
 		vertexFullName := pl.Name + "-" + v.Name
@@ -450,6 +453,20 @@ func buildVertices(pl *dfv1.Pipeline) map[string]dfv1.Vertex {
 				replicas = *x.Max
 			}
 		}
+		vCopyTemplates := dfv1.Templates{
+			VertexTemplate: &dfv1.VertexTemplate{
+				AbstractPodTemplate:   vCopy.AbstractPodTemplate,
+				ContainerTemplate:     vCopy.ContainerTemplate,
+				InitContainerTemplate: vCopy.InitContainerTemplate,
+			},
+		}
+		err := vCopyTemplates.UpdateWithDefaultsFrom(pl.Spec.Templates)
+		if err != nil {
+			return nil, err
+		}
+		vCopy.AbstractPodTemplate = vCopyTemplates.VertexTemplate.AbstractPodTemplate
+		vCopy.ContainerTemplate = vCopyTemplates.VertexTemplate.ContainerTemplate
+		vCopy.InitContainerTemplate = vCopyTemplates.VertexTemplate.InitContainerTemplate
 		spec := dfv1.VertexSpec{
 			AbstractVertex:             *vCopy,
 			PipelineName:               pl.Name,
@@ -475,7 +492,7 @@ func buildVertices(pl *dfv1.Pipeline) map[string]dfv1.Vertex {
 		}
 		result[obj.Name] = obj
 	}
-	return result
+	return result, nil
 }
 
 func copyVertexLimits(pl *dfv1.Pipeline, v *dfv1.AbstractVertex) {
