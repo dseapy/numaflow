@@ -48,9 +48,7 @@ func Start(namespaced bool, managedNamespace string) {
 	if err != nil {
 		logger.Fatalw("Failed to load global configuration file", zap.Error(err))
 	}
-	pipelineTemplates, err := reconciler.LoadPipelineTemplates(func(err error) {
-		logger.Errorw("Failed to reload pipeline templates file", zap.Error(err))
-	})
+	pipelineTemplates, err := reconciler.LoadPipelineTemplates()
 	if err != nil {
 		logger.Fatalw("Failed to load pipeline templates file", zap.Error(err))
 	}
