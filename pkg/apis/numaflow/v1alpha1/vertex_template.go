@@ -24,3 +24,25 @@ type VertexTemplate struct {
 	// +optional
 	InitContainerTemplate *ContainerTemplate `json:"initContainerTemplate,omitempty" protobuf:"bytes,3,opt,name=initContainerTemplate"`
 }
+
+// ApplyToAbstractVertex updates the AbstractVertex with the values in the VertexTemplate
+func (vt *VertexTemplate) ApplyToAbstractVertex(av *AbstractVertex) error {
+	vtTemplate := Templates{
+		VertexTemplate: vt,
+	}
+	avTemplate := Templates{
+		VertexTemplate: &VertexTemplate{
+			AbstractPodTemplate:   av.AbstractPodTemplate,
+			ContainerTemplate:     av.ContainerTemplate,
+			InitContainerTemplate: av.InitContainerTemplate,
+		},
+	}
+	err := avTemplate.UpdateWithDefaultsFrom(&vtTemplate)
+	if err != nil {
+		return err
+	}
+	av.AbstractPodTemplate = avTemplate.VertexTemplate.AbstractPodTemplate
+	av.ContainerTemplate = avTemplate.VertexTemplate.ContainerTemplate
+	av.InitContainerTemplate = avTemplate.VertexTemplate.InitContainerTemplate
+	return nil
+}

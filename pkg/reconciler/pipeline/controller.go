@@ -453,20 +453,11 @@ func buildVertices(pl *dfv1.Pipeline) (map[string]dfv1.Vertex, error) {
 				replicas = *x.Max
 			}
 		}
-		vCopyTemplates := dfv1.Templates{
-			VertexTemplate: &dfv1.VertexTemplate{
-				AbstractPodTemplate:   vCopy.AbstractPodTemplate,
-				ContainerTemplate:     vCopy.ContainerTemplate,
-				InitContainerTemplate: vCopy.InitContainerTemplate,
-			},
+		if pl.Spec.Templates != nil && pl.Spec.Templates.VertexTemplate != nil {
+			if err := pl.Spec.Templates.VertexTemplate.ApplyToAbstractVertex(vCopy); err != nil {
+				return nil, err
+			}
 		}
-		err := vCopyTemplates.UpdateWithDefaultsFrom(pl.Spec.Templates)
-		if err != nil {
-			return nil, err
-		}
-		vCopy.AbstractPodTemplate = vCopyTemplates.VertexTemplate.AbstractPodTemplate
-		vCopy.ContainerTemplate = vCopyTemplates.VertexTemplate.ContainerTemplate
-		vCopy.InitContainerTemplate = vCopyTemplates.VertexTemplate.InitContainerTemplate
 		spec := dfv1.VertexSpec{
 			AbstractVertex:             *vCopy,
 			PipelineName:               pl.Name,
