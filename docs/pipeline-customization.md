@@ -1,9 +1,9 @@
 # Pipeline Customization
 
 There is an optional `.spec.templates` field in the `Pipeline` resource which may be used to customize kubernetes resources owned by the Pipeline.
-This merges with (overriding where appropriate) anything specified in the [Controller ConfigMap Pipeline Templates](./controller-configmap.md#pipeline-templates).
+This takes precedence over anything specified in the [Controller ConfigMap](./controller-configmap.md#pipeline-templates-configuration).
 
-Individual vertex customization is described separately in more detail (i.e. [Environment Variables](./environment-variables.md), [Container Resources](./container-resources.md), etc.)
+Vertex customization is described separately (i.e. [Environment Variables](./environment-variables.md), [Container Resources](./container-resources.md), etc.)
 and takes precedence over any vertex templates.
 
 ## Component customization

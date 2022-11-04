@@ -55,7 +55,7 @@ func Start(namespaced bool, managedNamespace string) {
 		logger.Fatalw("Failed to load pipeline templates file", zap.Error(err))
 	}
 	if pipelineTemplates != nil {
-		logger.Info("Successfully loaded provided pipeline templates file")
+		logger.Info("Successfully loaded pipeline templates file")
 	}
 
 	image := sharedutil.LookupEnvStringOr(dfv1.EnvImage, "")

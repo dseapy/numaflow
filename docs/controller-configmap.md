@@ -6,7 +6,8 @@ For a detailed example, please see [`numaflow-controller-config.yaml`](./numaflo
 
 ## Configuration Structure
 
-The configuration should be under `controller-config.yaml` key in the ConfigMap, as a string in `yaml` format.  Pipeline templates, if provided, should be under `pipeline-templates.yaml`.
+The configuration should be under `controller-config.yaml` key in the ConfigMap, as a string in `yaml` format.
+Additionally, pipeline templates can be provided be under `pipeline-templates.yaml`.
 
 ```yaml
 apiVersion: v1
@@ -51,13 +52,16 @@ data:
 
 Pipeline Templates are used to customize Pipeline components and can be specified in 2 places:
 * **In the controller ConfigMap** (described here), which affect all pipelines managed by the controller. The
-    logs will show `Successfully loaded provided pipeline templates file` if it detects pipeline templates.
+    logs will show `Successfully loaded pipeline templates file` if it detects pipeline templates.
 * **In each Pipeline** (described in [Pipeline customization](./pipeline-customization.md)), which affect that 
-    single pipeline and takes precedence what is specified in the controller configmap.
+    individual pipeline and takes precedence over what is specified in the controller configmap.
 
-In either case the configuration is the same, the only difference being that the ConfigMap has `.data."pipeline-templates.yaml"`
-which contains a string in `yaml` format and the Pipeline has `.spec.templates` which contains yaml. Below shows how to
-populate the ConfigMap, see the [Pipeline customization](./pipeline-customization.md) for more details.
+In either case the configuration is the same, the only difference being where it is specified.
+The ConfigMap expects a string in `yaml` format under `.data."pipeline-templates.yaml"`, whereas a Pipeline expects
+yaml under `.spec.templates`.
+
+The example below shows how to populate the ConfigMap.
+For more details about pipeline templates, see [Pipeline customization](./pipeline-customization.md).
 
 ```yaml
 apiVersion: v1
@@ -73,11 +77,10 @@ data:
     job:
       ttlSecondsAfterFinished: 600
     vertex:
-      podTemplate:
-        metadata:
-          annotations:
-            key1: value1
-        priorityClassName: my-priority-class-name
+      metadata:
+        annotations:
+          key1: value1
+      priorityClassName: my-priority-class-name
       containerTemplate:
         resources:
           requests:

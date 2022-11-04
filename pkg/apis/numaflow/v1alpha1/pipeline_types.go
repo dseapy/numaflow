@@ -20,7 +20,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"os"
 	"strings"
 	"time"
@@ -29,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/utils/pointer"
 )
 
@@ -414,7 +414,7 @@ type Templates struct {
 	VertexTemplate *VertexTemplate `json:"vertex,omitempty" protobuf:"bytes,3,opt,name=vertex"`
 }
 
-// UpdateWithDefaultsFrom updates the template by doing a strategic merge patch, defaulting to the passed templates
+// UpdateWithDefaultsFrom updates the template by doing a strategic merge patch, defaulting to the templates argument
 func (tpl *Templates) UpdateWithDefaultsFrom(defaultTemplate *Templates) error {
 	if defaultTemplate == nil {
 		return nil
