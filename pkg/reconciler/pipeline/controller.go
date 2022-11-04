@@ -86,7 +86,7 @@ func (r *pipelineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if reconcileErr != nil {
 		log.Errorw("Reconcile error", zap.Error(reconcileErr))
 	}
-	plCopy.Spec.Templates = pl.Spec.Templates
+	plCopy.Spec.Templates = pl.Spec.Templates.DeepCopy()
 	plCopy.Status.LastUpdated = metav1.Now()
 	if needsUpdate(pl, plCopy) {
 		if err := r.client.Update(ctx, plCopy); err != nil {
